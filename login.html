@@ -1,0 +1,580 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<meta name="description" content="Sign in to TrustWave Finance"/>
+<title>Sign In – TrustWave Finance</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --navy:  #0a1628;
+    --navy2: #0f2044;
+    --teal:  #00c9a7;
+    --teal2: #00a88a;
+    --gold:  #f4c542;
+    --white: #ffffff;
+    --off:   #f4f7fb;
+    --grey:  #8a96a8;
+    --red:   #ff4d6d;
+    --shadow: 0 8px 40px rgba(10,22,40,.13);
+    --radius: 14px;
+    --font-head: 'Playfair Display', Georgia, serif;
+    --font-body: 'DM Sans', sans-serif;
+    --tr: .25s cubic-bezier(.4,0,.2,1);
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: var(--font-body);
+    background: var(--off);
+    color: var(--navy);
+    min-height: 100vh;
+    display: flex; flex-direction: column;
+  }
+  a { text-decoration: none; color: inherit; }
+
+  /* ── NAV ── */
+  nav {
+    background: var(--navy);
+    padding: 0 32px; height: 64px;
+    display: flex; align-items: center; justify-content: space-between;
+    position: sticky; top: 0; z-index: 100;
+  }
+  .logo {
+    display: flex; align-items: center; gap: 9px;
+    font-family: var(--font-head); font-size: 1.15rem; font-weight: 700; color: var(--white);
+  }
+  .logo-icon {
+    width: 32px; height: 32px;
+    background: linear-gradient(135deg, var(--teal), var(--teal2));
+    border-radius: 9px; display: flex; align-items: center; justify-content: center; font-size: 1rem;
+  }
+  .logo span { color: var(--teal); }
+  .nav-back { font-size: .85rem; color: rgba(255,255,255,.55); display: flex; align-items: center; gap: 6px; transition: color var(--tr); }
+  .nav-back:hover { color: var(--teal); }
+
+  /* ── LAYOUT ── */
+  .page {
+    flex: 1; display: grid; grid-template-columns: 1fr 1fr;
+    min-height: calc(100vh - 64px);
+  }
+
+  /* ── LEFT PANEL ── */
+  .left-panel {
+    background: linear-gradient(145deg, var(--navy), var(--navy2));
+    padding: 64px 56px;
+    display: flex; flex-direction: column; justify-content: center;
+    position: relative; overflow: hidden;
+  }
+  .left-panel::before {
+    content: ''; position: absolute; bottom: -80px; right: -80px;
+    width: 380px; height: 380px;
+    background: radial-gradient(circle, rgba(0,201,167,.18), transparent 65%);
+    border-radius: 50%;
+  }
+  .left-panel::after {
+    content: ''; position: absolute; top: -40px; left: -40px;
+    width: 200px; height: 200px;
+    background: radial-gradient(circle, rgba(244,197,66,.07), transparent 65%);
+    border-radius: 50%;
+  }
+  .left-badge {
+    display: inline-flex; align-items: center; gap: 7px;
+    background: rgba(0,201,167,.12); border: 1px solid rgba(0,201,167,.2);
+    color: var(--teal); font-size: .72rem; font-weight: 600; letter-spacing: .1em; text-transform: uppercase;
+    padding: 5px 12px; border-radius: 100px; width: fit-content; margin-bottom: 28px; position: relative;
+  }
+  .left-panel h1 {
+    font-family: var(--font-head); font-size: clamp(1.8rem,3vw,2.6rem);
+    font-weight: 900; color: var(--white); line-height: 1.15; margin-bottom: 16px; position: relative;
+  }
+  .left-panel h1 em { color: var(--teal); font-style: normal; }
+  .left-panel > p {
+    color: rgba(255,255,255,.5); font-size: .95rem; line-height: 1.75;
+    max-width: 360px; margin-bottom: 48px; position: relative;
+  }
+
+  /* mock dashboard card */
+  .dash-card {
+    background: rgba(255,255,255,.05);
+    border: 1px solid rgba(255,255,255,.1);
+    border-radius: 20px; padding: 28px;
+    position: relative; overflow: hidden;
+  }
+  .dash-card::before {
+    content: ''; position: absolute; top: -30px; right: -30px;
+    width: 120px; height: 120px;
+    background: radial-gradient(circle, rgba(0,201,167,.15), transparent 70%);
+    border-radius: 50%;
+  }
+  .dash-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+  .dash-label { font-size: .7rem; color: rgba(255,255,255,.4); text-transform: uppercase; letter-spacing: .1em; }
+  .dash-bal { font-family: var(--font-head); font-size: 2rem; color: var(--white); font-weight: 700; margin: 4px 0 20px; }
+  .dash-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px; }
+  .dash-stat { background: rgba(255,255,255,.06); border-radius: 10px; padding: 12px; }
+  .dash-stat-label { font-size: .68rem; color: rgba(255,255,255,.35); margin-bottom: 4px; }
+  .dash-stat-val { font-size: .95rem; font-weight: 600; color: var(--white); }
+  .dash-stat-val.green { color: var(--teal); }
+  .dash-stat-val.gold  { color: var(--gold); }
+  .dash-divider { border: none; border-top: 1px solid rgba(255,255,255,.07); margin-bottom: 16px; }
+  .dash-txns { display: flex; flex-direction: column; gap: 10px; }
+  .dash-txn { display: flex; justify-content: space-between; align-items: center; }
+  .txn-info { font-size: .78rem; }
+  .txn-name { color: rgba(255,255,255,.7); font-weight: 500; }
+  .txn-date { color: rgba(255,255,255,.3); font-size: .68rem; }
+  .txn-amt  { font-size: .82rem; font-weight: 600; }
+  .txn-amt.cr { color: var(--teal); }
+  .txn-amt.dr { color: #ff6b6b; }
+
+  /* ── RIGHT PANEL ── */
+  .right-panel {
+    background: var(--white);
+    padding: 56px 52px;
+    display: flex; flex-direction: column; justify-content: center;
+    overflow-y: auto;
+  }
+
+  .form-header { margin-bottom: 36px; }
+  .form-header h2 { font-family: var(--font-head); font-size: 2rem; font-weight: 700; color: var(--navy); margin-bottom: 8px; }
+  .form-header p  { color: var(--grey); font-size: .9rem; }
+  .form-header p a { color: var(--teal); font-weight: 600; }
+  .form-header p a:hover { text-decoration: underline; }
+
+  /* ── FIELDS ── */
+  .field { margin-bottom: 20px; }
+  .field label { display: block; font-size: .8rem; font-weight: 600; color: var(--navy); margin-bottom: 7px; letter-spacing: .02em; }
+  .input-wrap { position: relative; }
+  .input-wrap .icon { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); font-size: 1rem; pointer-events: none; }
+  .field input {
+    width: 100%; padding: 13px 14px 13px 42px;
+    border: 1.5px solid rgba(10,22,40,.1); border-radius: 10px;
+    font-family: var(--font-body); font-size: .9rem; color: var(--navy);
+    background: var(--white); outline: none; appearance: none;
+    transition: border-color var(--tr), box-shadow var(--tr);
+  }
+  .field input:focus { border-color: var(--teal); box-shadow: 0 0 0 3px rgba(0,201,167,.12); }
+  .field input.error { border-color: var(--red); box-shadow: 0 0 0 3px rgba(255,77,109,.1); }
+  .field input.valid { border-color: var(--teal); }
+  .field-error { font-size: .75rem; color: var(--red); margin-top: 5px; display: none; }
+  .field-error.show { display: block; }
+  .pw-toggle {
+    position: absolute; right: 14px; top: 50%; transform: translateY(-50%);
+    cursor: pointer; font-size: .85rem; color: var(--grey);
+    user-select: none; transition: color var(--tr);
+  }
+  .pw-toggle:hover { color: var(--teal); }
+
+  .field-row-space { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+  .remember { display: flex; align-items: center; gap: 8px; font-size: .83rem; color: #4a5568; cursor: pointer; }
+  .remember input[type=checkbox] { width: 16px; height: 16px; accent-color: var(--teal); cursor: pointer; }
+  .forgot { font-size: .83rem; color: var(--teal); font-weight: 600; }
+  .forgot:hover { text-decoration: underline; }
+
+  /* alert box */
+  .alert {
+    display: none; padding: 13px 16px; border-radius: 10px;
+    font-size: .85rem; font-weight: 500; margin-bottom: 20px;
+    border: 1.5px solid; align-items: center; gap: 10px;
+  }
+  .alert.show { display: flex; }
+  .alert.error-alert  { background: rgba(255,77,109,.07); border-color: rgba(255,77,109,.25); color: #c0273f; }
+  .alert.success-alert { background: rgba(0,201,167,.07); border-color: rgba(0,201,167,.25); color: var(--teal2); }
+
+  /* submit */
+  .btn-submit {
+    width: 100%; padding: 15px;
+    background: linear-gradient(135deg, var(--teal), var(--teal2));
+    color: var(--navy); font-family: var(--font-body);
+    font-size: .95rem; font-weight: 700;
+    border: none; border-radius: 10px;
+    cursor: pointer; transition: var(--tr);
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+  }
+  .btn-submit:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,201,167,.35); }
+  .btn-submit:disabled { opacity: .6; cursor: not-allowed; transform: none; }
+
+  .divider { display: flex; align-items: center; gap: 12px; margin: 24px 0; }
+  .divider hr { flex: 1; border: none; border-top: 1px solid rgba(10,22,40,.08); }
+  .divider span { font-size: .78rem; color: var(--grey); white-space: nowrap; }
+
+  .btn-register {
+    width: 100%; padding: 14px;
+    background: transparent; border: 1.5px solid rgba(10,22,40,.12);
+    color: var(--navy); font-family: var(--font-body);
+    font-size: .9rem; font-weight: 600;
+    border-radius: 10px; cursor: pointer; transition: var(--tr);
+  }
+  .btn-register:hover { border-color: var(--teal); color: var(--teal); }
+
+  /* security badges */
+  .security-badges {
+    display: flex; gap: 16px; justify-content: center; flex-wrap: wrap;
+    margin-top: 28px; padding-top: 24px;
+    border-top: 1px solid rgba(10,22,40,.06);
+  }
+  .sec-badge {
+    display: flex; align-items: center; gap: 5px;
+    font-size: .72rem; color: var(--grey);
+  }
+
+  /* ── SUCCESS SCREEN ── */
+  .success-screen { display: none; text-align: center; }
+  .success-screen.show { display: block; }
+  .success-icon {
+    width: 80px; height: 80px;
+    background: linear-gradient(135deg, rgba(0,201,167,.15), rgba(0,201,167,.05));
+    border-radius: 50%; display: flex; align-items: center; justify-content: center;
+    font-size: 2.5rem; margin: 0 auto 24px;
+    animation: pop .5s cubic-bezier(.4,0,.2,1);
+  }
+  @keyframes pop { 0%{transform:scale(0)} 70%{transform:scale(1.1)} 100%{transform:scale(1)} }
+  .success-screen h3 { font-family: var(--font-head); font-size: 1.8rem; font-weight: 700; margin-bottom: 10px; }
+  .success-screen p  { color: var(--grey); font-size: .92rem; margin-bottom: 28px; }
+  .welcome-card {
+    background: var(--off); border-radius: 14px; padding: 24px;
+    text-align: left; margin-bottom: 28px;
+    border: 1px solid rgba(10,22,40,.06);
+  }
+  .welcome-card .wc-row { display: flex; justify-content: space-between; align-items: center; padding: 7px 0; border-bottom: 1px solid rgba(10,22,40,.05); font-size: .85rem; }
+  .welcome-card .wc-row:last-child { border: none; }
+  .wc-key { color: var(--grey); }
+  .wc-val { font-weight: 600; color: var(--navy); }
+  .btn-dashboard {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: var(--navy); color: var(--white);
+    padding: 14px 32px; border-radius: 10px;
+    font-weight: 700; font-size: .9rem;
+    transition: var(--tr); cursor: pointer; border: none;
+    font-family: var(--font-body); width: 100%; justify-content: center;
+  }
+  .btn-dashboard:hover { background: var(--teal); color: var(--navy); transform: translateY(-2px); }
+
+  /* forgot password modal */
+  .modal-overlay {
+    position: fixed; inset: 0;
+    background: rgba(10,22,40,.6); backdrop-filter: blur(4px);
+    z-index: 999; display: none; align-items: center; justify-content: center;
+    padding: 24px;
+  }
+  .modal-overlay.show { display: flex; }
+  .modal {
+    background: var(--white); border-radius: 20px; padding: 40px 36px;
+    max-width: 420px; width: 100%;
+    box-shadow: 0 32px 64px rgba(10,22,40,.25);
+    animation: slideUp .3s cubic-bezier(.4,0,.2,1);
+  }
+  @keyframes slideUp { from{transform:translateY(20px);opacity:0} to{transform:translateY(0);opacity:1} }
+  .modal h3 { font-family: var(--font-head); font-size: 1.4rem; font-weight: 700; margin-bottom: 8px; }
+  .modal p  { color: var(--grey); font-size: .88rem; margin-bottom: 24px; }
+  .modal-close {
+    float: right; background: none; border: none;
+    font-size: 1.2rem; cursor: pointer; color: var(--grey);
+    margin-top: -8px; transition: color var(--tr);
+  }
+  .modal-close:hover { color: var(--navy); }
+  .modal .field { margin-bottom: 16px; }
+  .modal-actions { display: flex; gap: 12px; margin-top: 4px; }
+  .modal-actions button { flex: 1; }
+  .btn-modal-cancel {
+    padding: 13px; border: 1.5px solid rgba(10,22,40,.12);
+    background: none; border-radius: 10px; font-family: var(--font-body);
+    font-size: .88rem; font-weight: 600; color: var(--grey); cursor: pointer; transition: var(--tr);
+  }
+  .btn-modal-cancel:hover { border-color: var(--navy); color: var(--navy); }
+  .btn-modal-submit {
+    padding: 13px; background: linear-gradient(135deg,var(--teal),var(--teal2));
+    border: none; border-radius: 10px; font-family: var(--font-body);
+    font-size: .88rem; font-weight: 700; color: var(--navy); cursor: pointer; transition: var(--tr);
+  }
+  .btn-modal-submit:hover { box-shadow: 0 6px 18px rgba(0,201,167,.35); }
+
+  /* ── RESPONSIVE ── */
+  @media (max-width: 860px) {
+    .page { grid-template-columns: 1fr; }
+    .left-panel { display: none; }
+    .right-panel { padding: 40px 28px; }
+  }
+  @media (max-width: 480px) {
+    .right-panel { padding: 32px 20px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <a href="index.html" class="logo">
+    <div class="logo-icon">🌊</div>
+    TrustWave <span>&nbsp;Finance</span>
+  </a>
+  <a href="index.html" class="nav-back">← Back to Home</a>
+</nav>
+
+<div class="page">
+
+  <!-- LEFT PANEL -->
+  <div class="left-panel">
+    <div class="left-badge">🔒 Secure Login</div>
+    <h1>Welcome<br><em>Back</em></h1>
+    <p>Sign in to access your accounts, transfer funds, and manage your finances — all from one place.</p>
+
+    <!-- Mock Dashboard Preview -->
+    <div class="dash-card">
+      <div class="dash-top">
+        <div>
+          <div class="dash-label">Total Balance</div>
+          <div class="dash-bal">$24,850.00</div>
+        </div>
+        <div style="background:rgba(0,201,167,.1);border-radius:10px;padding:8px 12px;font-size:.75rem;color:var(--teal);font-weight:600;">● Live</div>
+      </div>
+      <div class="dash-row">
+        <div class="dash-stat">
+          <div class="dash-stat-label">Monthly In</div>
+          <div class="dash-stat-val green">+$5,200</div>
+        </div>
+        <div class="dash-stat">
+          <div class="dash-stat-label">Rewards</div>
+          <div class="dash-stat-val gold">$284</div>
+        </div>
+      </div>
+      <hr class="dash-divider"/>
+      <div class="dash-txns">
+        <div class="dash-txn">
+          <div class="txn-info"><div class="txn-name">Direct Deposit</div><div class="txn-date">Today, 09:14 AM</div></div>
+          <div class="txn-amt cr">+$3,200</div>
+        </div>
+        <div class="dash-txn">
+          <div class="txn-info"><div class="txn-name">Online Transfer</div><div class="txn-date">Yesterday</div></div>
+          <div class="txn-amt dr">−$480</div>
+        </div>
+        <div class="dash-txn">
+          <div class="txn-info"><div class="txn-name">Cash Reward</div><div class="txn-date">May 27</div></div>
+          <div class="txn-amt cr">+$42</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT PANEL -->
+  <div class="right-panel">
+
+    <!-- Login Form -->
+    <div id="loginContainer">
+      <div class="form-header">
+        <h2>Sign In</h2>
+        <p>Don't have an account? <a href="register.html">Create one free →</a></p>
+      </div>
+
+      <!-- Alert box -->
+      <div class="alert error-alert" id="loginAlert">
+        <span>⚠️</span> <span id="loginAlertMsg">Invalid username or password.</span>
+      </div>
+
+      <div class="field">
+        <label>Username or Email</label>
+        <div class="input-wrap">
+          <span class="icon">👤</span>
+          <input type="text" id="loginId" placeholder="Enter your username or email" autocomplete="username"/>
+        </div>
+        <div class="field-error" id="loginIdErr">Please enter your username or email.</div>
+      </div>
+
+      <div class="field">
+        <label>Password</label>
+        <div class="input-wrap">
+          <span class="icon">🔑</span>
+          <input type="password" id="loginPw" placeholder="Enter your password" autocomplete="current-password"
+            onkeydown="if(event.key==='Enter') attemptLogin()"/>
+          <span class="pw-toggle" onclick="togglePw()">👁</span>
+        </div>
+        <div class="field-error" id="loginPwErr">Please enter your password.</div>
+      </div>
+
+      <div class="field-row-space">
+        <label class="remember">
+          <input type="checkbox" id="rememberMe"/> Remember me
+        </label>
+        <a href="#" class="forgot" onclick="openForgot(event)">Forgot password?</a>
+      </div>
+
+      <button class="btn-submit" id="loginBtn" onclick="attemptLogin()">
+        🔐 Sign In to My Account
+      </button>
+
+      <div class="divider"><hr/><span>New to TrustWave?</span><hr/></div>
+
+      <button class="btn-register" onclick="window.location.href='register.html'">
+        ✨ Create a Free Account
+      </button>
+
+      <div class="security-badges">
+        <div class="sec-badge">🔒 256-bit SSL</div>
+        <div class="sec-badge">🛡️ Fraud Protection</div>
+        <div class="sec-badge">📱 2FA Ready</div>
+        <div class="sec-badge">🏦 FDIC Insured</div>
+      </div>
+    </div>
+
+    <!-- Success screen -->
+    <div class="success-screen" id="successScreen">
+      <div class="success-icon">👋</div>
+      <h3>Welcome Back!</h3>
+      <p id="welcomeMsg">You have successfully signed in to your TrustWave Finance account.</p>
+      <div class="welcome-card" id="welcomeCard"></div>
+      <button class="btn-dashboard" onclick="window.location.href='dashboard.html'">
+        🚀 Go to Dashboard
+      </button>
+    </div>
+
+  </div>
+</div>
+
+<!-- FORGOT PASSWORD MODAL -->
+<div class="modal-overlay" id="forgotModal">
+  <div class="modal">
+    <button class="modal-close" onclick="closeForgot()">✕</button>
+    <h3>Reset Password</h3>
+    <p>Enter the email address linked to your account and we'll send you reset instructions.</p>
+    <div class="field">
+      <label>Email Address</label>
+      <div class="input-wrap">
+        <span class="icon">✉️</span>
+        <input type="email" id="forgotEmail" placeholder="your@email.com"/>
+      </div>
+      <div class="field-error" id="forgotEmailErr">Please enter a valid email address.</div>
+    </div>
+    <div class="alert success-alert" id="forgotSuccess" style="margin-top:12px">
+      <span>✅</span> <span>Reset instructions sent! Check your inbox.</span>
+    </div>
+    <div class="modal-actions" id="forgotActions">
+      <button class="btn-modal-cancel" onclick="closeForgot()">Cancel</button>
+      <button class="btn-modal-submit" onclick="submitForgot()">Send Reset Link</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ── TOGGLE PASSWORD ───────────────────────────────
+  function togglePw() {
+    const inp = document.getElementById('loginPw');
+    const btn = document.querySelector('.pw-toggle');
+    const show = inp.type === 'password';
+    inp.type = show ? 'text' : 'password';
+    btn.textContent = show ? '🙈' : '👁';
+  }
+
+  // ── SHOW/HIDE ERROR ───────────────────────────────
+  function showErr(id, show) {
+    const el = document.getElementById(id);
+    if (el) el.classList.toggle('show', show);
+  }
+  function markInput(id, hasErr) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.classList.toggle('error', hasErr);
+    el.classList.toggle('valid', !hasErr && el.value.trim());
+  }
+
+  // ── LOGIN ─────────────────────────────────────────
+  function attemptLogin() {
+    const loginId = document.getElementById('loginId').value.trim();
+    const loginPw = document.getElementById('loginPw').value;
+    const alertEl = document.getElementById('loginAlert');
+    const alertMsg = document.getElementById('loginAlertMsg');
+    let ok = true;
+
+    // clear alerts
+    alertEl.classList.remove('show');
+
+    if (!loginId) { showErr('loginIdErr', true); markInput('loginId', true); ok = false; }
+    else           { showErr('loginIdErr', false); markInput('loginId', false); }
+
+    if (!loginPw)  { showErr('loginPwErr', true); markInput('loginPw', true); ok = false; }
+    else           { showErr('loginPwErr', false); markInput('loginPw', false); }
+
+    if (!ok) return;
+
+    // Check against registered users in localStorage
+    const users = JSON.parse(localStorage.getItem('tw_users') || '[]');
+    const match = users.find(u =>
+      (u.username === loginId || u.email === loginId)
+    );
+
+    if (!match) {
+      alertMsg.textContent = 'No account found with that username or email. Please register first.';
+      alertEl.classList.add('show');
+      markInput('loginId', true);
+      return;
+    }
+
+    // Note: In a real app, passwords would be hashed. This is a demo.
+    const btn = document.getElementById('loginBtn');
+    btn.disabled = true;
+    btn.textContent = '⏳ Signing in…';
+
+    // Remember me
+    if (document.getElementById('rememberMe').checked) {
+      localStorage.setItem('tw_remembered', loginId);
+    }
+    localStorage.setItem('tw_current_user', JSON.stringify(match));
+
+    setTimeout(() => showSuccess(match), 1200);
+  }
+
+  function showSuccess(user) {
+    document.getElementById('loginContainer').style.display = 'none';
+    const ss = document.getElementById('successScreen');
+    ss.classList.add('show');
+
+    document.getElementById('welcomeMsg').textContent =
+      `Welcome back, ${user.firstName}! You're now signed in to your TrustWave Finance account.`;
+
+    document.getElementById('welcomeCard').innerHTML = `
+      <div class="wc-row"><span class="wc-key">Full Name</span><span class="wc-val">${user.firstName} ${user.lastName}</span></div>
+      <div class="wc-row"><span class="wc-key">Username</span><span class="wc-val">${user.username}</span></div>
+      <div class="wc-row"><span class="wc-key">Account Type</span><span class="wc-val">${user.accType}</span></div>
+      <div class="wc-row"><span class="wc-key">Account ID</span><span class="wc-val">${user.accountId}</span></div>
+      <div class="wc-row"><span class="wc-key">Currency</span><span class="wc-val">${user.currency}</span></div>
+    `;
+  }
+
+  // ── FORGOT PASSWORD MODAL ─────────────────────────
+  function openForgot(e) {
+    e.preventDefault();
+    document.getElementById('forgotModal').classList.add('show');
+    document.getElementById('forgotEmail').value = '';
+    document.getElementById('forgotSuccess').classList.remove('show');
+    document.getElementById('forgotActions').style.display = 'flex';
+    document.getElementById('forgotEmailErr').classList.remove('show');
+  }
+  function closeForgot() {
+    document.getElementById('forgotModal').classList.remove('show');
+  }
+  function submitForgot() {
+    const em = document.getElementById('forgotEmail').value.trim();
+    const re = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!re.test(em)) {
+      document.getElementById('forgotEmailErr').classList.add('show');
+      return;
+    }
+    document.getElementById('forgotEmailErr').classList.remove('show');
+    document.getElementById('forgotActions').style.display = 'none';
+    document.getElementById('forgotSuccess').classList.add('show');
+    setTimeout(closeForgot, 3000);
+  }
+  // Close modal on overlay click
+  document.getElementById('forgotModal').addEventListener('click', function(e) {
+    if (e.target === this) closeForgot();
+  });
+
+  // ── AUTO-FILL REMEMBERED USER ─────────────────────
+  window.addEventListener('DOMContentLoaded', () => {
+    const remembered = localStorage.getItem('tw_remembered');
+    if (remembered) {
+      document.getElementById('loginId').value = remembered;
+      document.getElementById('rememberMe').checked = true;
+    }
+  });
+</script>
+</body>
+</html>

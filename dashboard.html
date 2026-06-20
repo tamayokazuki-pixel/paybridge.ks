@@ -1,0 +1,1172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Dashboard – TrustWave Finance</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<style>
+:root {
+  --navy:  #0a1628;
+  --navy2: #0f2044;
+  --navy3: #162c56;
+  --teal:  #00c9a7;
+  --teal2: #00a88a;
+  --gold:  #f4c542;
+  --white: #ffffff;
+  --off:   #f4f7fb;
+  --grey:  #8a96a8;
+  --red:   #ff4d6d;
+  --green: #00c9a7;
+  --sidebar-w: 260px;
+  --font-head: 'Playfair Display', Georgia, serif;
+  --font-body: 'DM Sans', sans-serif;
+  --tr: .25s cubic-bezier(.4,0,.2,1);
+  --shadow: 0 4px 24px rgba(10,22,40,.08);
+  --radius: 16px;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body { font-family: var(--font-body); background: var(--off); color: var(--navy); min-height: 100vh; display: flex; }
+a { text-decoration: none; color: inherit; }
+
+/* ── SIDEBAR ── */
+.sidebar {
+  width: var(--sidebar-w); background: var(--navy);
+  min-height: 100vh; position: fixed; top: 0; left: 0;
+  display: flex; flex-direction: column; z-index: 200;
+  transition: transform var(--tr);
+}
+.sidebar-logo {
+  padding: 28px 24px 24px;
+  border-bottom: 1px solid rgba(255,255,255,.06);
+  display: flex; align-items: center; gap: 10px;
+  font-family: var(--font-head); font-size: 1.1rem; font-weight: 700; color: var(--white);
+}
+.logo-icon { width: 34px; height: 34px; background: linear-gradient(135deg,var(--teal),var(--teal2)); border-radius: 9px; display: flex; align-items: center; justify-content: center; font-size: .95rem; flex-shrink: 0; }
+.logo-icon + span em { color: var(--teal); font-style: normal; }
+
+.sidebar-user {
+  padding: 20px 24px;
+  border-bottom: 1px solid rgba(255,255,255,.06);
+  display: flex; align-items: center; gap: 12px;
+}
+.user-avatar {
+  width: 42px; height: 42px; border-radius: 50%;
+  background: linear-gradient(135deg, var(--teal), var(--gold));
+  display: flex; align-items: center; justify-content: center;
+  font-weight: 700; font-size: .95rem; color: var(--navy); flex-shrink: 0;
+}
+.user-name  { font-size: .88rem; font-weight: 600; color: var(--white); }
+.user-accid { font-size: .7rem; color: rgba(255,255,255,.35); }
+
+.sidebar-nav { flex: 1; padding: 16px 0; }
+.nav-section-label { font-size: .62rem; font-weight: 600; letter-spacing: .14em; text-transform: uppercase; color: rgba(255,255,255,.25); padding: 16px 24px 8px; }
+.nav-item {
+  display: flex; align-items: center; gap: 12px;
+  padding: 11px 24px; font-size: .88rem; font-weight: 500;
+  color: rgba(255,255,255,.5); cursor: pointer;
+  transition: all var(--tr); border-left: 3px solid transparent;
+  position: relative;
+}
+.nav-item:hover { color: var(--white); background: rgba(255,255,255,.04); }
+.nav-item.active { color: var(--teal); background: rgba(0,201,167,.08); border-left-color: var(--teal); }
+.nav-item .ni-icon { font-size: 1.1rem; width: 22px; text-align: center; }
+.nav-item .ni-badge {
+  margin-left: auto; background: var(--red); color: var(--white);
+  font-size: .65rem; font-weight: 700; padding: 2px 7px; border-radius: 100px;
+}
+
+.sidebar-footer {
+  padding: 20px 24px; border-top: 1px solid rgba(255,255,255,.06);
+}
+.btn-logout {
+  display: flex; align-items: center; gap: 10px;
+  width: 100%; padding: 10px 14px; border-radius: 10px;
+  background: rgba(255,77,109,.1); border: 1px solid rgba(255,77,109,.2);
+  color: #ff6b8a; font-family: var(--font-body); font-size: .85rem; font-weight: 600;
+  cursor: pointer; transition: var(--tr);
+}
+.btn-logout:hover { background: rgba(255,77,109,.2); }
+
+/* ── TOPBAR ── */
+.topbar {
+  position: fixed; top: 0; left: var(--sidebar-w); right: 0;
+  height: 64px; background: var(--white);
+  border-bottom: 1px solid rgba(10,22,40,.07);
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 0 32px; z-index: 100;
+  box-shadow: 0 2px 12px rgba(10,22,40,.04);
+}
+.topbar-title { font-family: var(--font-head); font-size: 1.25rem; font-weight: 700; }
+.topbar-right { display: flex; align-items: center; gap: 16px; }
+.topbar-time { font-size: .8rem; color: var(--grey); }
+.topbar-notif {
+  width: 38px; height: 38px; border-radius: 10px;
+  background: var(--off); display: flex; align-items: center; justify-content: center;
+  font-size: 1.1rem; cursor: pointer; position: relative; transition: var(--tr);
+}
+.topbar-notif:hover { background: rgba(0,201,167,.1); }
+.notif-dot { position: absolute; top: 6px; right: 6px; width: 8px; height: 8px; background: var(--red); border-radius: 50%; border: 2px solid var(--white); }
+.hamburger-btn {
+  display: none; background: none; border: none; cursor: pointer; padding: 4px;
+}
+.hamburger-btn span { display: block; width: 22px; height: 2px; background: var(--navy); border-radius: 2px; margin: 4px 0; transition: var(--tr); }
+
+/* ── MAIN ── */
+.main {
+  margin-left: var(--sidebar-w);
+  margin-top: 64px;
+  padding: 32px;
+  flex: 1; min-height: calc(100vh - 64px);
+  width: calc(100% - var(--sidebar-w));
+}
+
+/* ── PAGES ── */
+.page-view { display: none; }
+.page-view.active { display: block; }
+
+/* ── OVERVIEW ── */
+.welcome-banner {
+  background: linear-gradient(135deg, var(--navy), var(--navy3));
+  border-radius: var(--radius); padding: 32px 36px;
+  color: var(--white); margin-bottom: 28px;
+  position: relative; overflow: hidden;
+}
+.welcome-banner::before {
+  content: ''; position: absolute; right: -60px; top: -60px;
+  width: 260px; height: 260px;
+  background: radial-gradient(circle, rgba(0,201,167,.18), transparent 65%);
+  border-radius: 50%;
+}
+.welcome-banner::after {
+  content: ''; position: absolute; left: 40%; bottom: -40px;
+  width: 180px; height: 180px;
+  background: radial-gradient(circle, rgba(244,197,66,.08), transparent 65%);
+  border-radius: 50%;
+}
+.wb-top { display: flex; justify-content: space-between; align-items: flex-start; position: relative; }
+.wb-greeting { font-size: .85rem; color: rgba(255,255,255,.5); margin-bottom: 6px; }
+.wb-name { font-family: var(--font-head); font-size: 1.6rem; font-weight: 700; margin-bottom: 4px; }
+.wb-id   { font-size: .75rem; color: rgba(255,255,255,.35); }
+.wb-badge { background: rgba(0,201,167,.15); border: 1px solid rgba(0,201,167,.25); color: var(--teal); font-size: .72rem; font-weight: 600; padding: 4px 12px; border-radius: 100px; }
+
+.balance-display { margin-top: 28px; position: relative; }
+.bal-label { font-size: .72rem; color: rgba(255,255,255,.4); text-transform: uppercase; letter-spacing: .1em; margin-bottom: 6px; }
+.bal-amount { font-family: var(--font-head); font-size: 3rem; font-weight: 900; color: var(--white); line-height: 1; }
+.bal-currency { font-size: 1.2rem; color: rgba(255,255,255,.5); font-weight: 400; margin-left: 4px; }
+.bal-change { display: inline-flex; align-items: center; gap: 5px; margin-top: 8px; font-size: .8rem; color: var(--teal); }
+
+/* stat cards */
+.stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin-bottom: 28px; }
+.stat-card {
+  background: var(--white); border-radius: var(--radius);
+  padding: 22px 24px; box-shadow: var(--shadow);
+  border: 1px solid rgba(10,22,40,.05); transition: var(--tr);
+}
+.stat-card:hover { transform: translateY(-3px); box-shadow: 0 8px 32px rgba(10,22,40,.1); }
+.sc-top { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; }
+.sc-label { font-size: .75rem; color: var(--grey); font-weight: 500; text-transform: uppercase; letter-spacing: .08em; }
+.sc-icon { width: 36px; height: 36px; border-radius: 10px; display: flex; align-items: center; justify-content: center; font-size: 1rem; }
+.sc-icon.teal  { background: rgba(0,201,167,.12); }
+.sc-icon.gold  { background: rgba(244,197,66,.12); }
+.sc-icon.blue  { background: rgba(59,130,246,.12); }
+.sc-icon.red   { background: rgba(255,77,109,.12); }
+.sc-val { font-family: var(--font-head); font-size: 1.5rem; font-weight: 700; }
+.sc-sub { font-size: .72rem; color: var(--grey); margin-top: 4px; }
+.sc-sub.pos { color: var(--teal); }
+.sc-sub.neg { color: var(--red); }
+
+/* quick actions */
+.quick-actions { display: grid; grid-template-columns: repeat(4,1fr); gap: 16px; margin-bottom: 28px; }
+.qa-btn {
+  background: var(--white); border-radius: var(--radius);
+  padding: 20px; text-align: center; cursor: pointer;
+  box-shadow: var(--shadow); border: 1px solid rgba(10,22,40,.05);
+  transition: var(--tr);
+}
+.qa-btn:hover { transform: translateY(-4px); box-shadow: 0 12px 32px rgba(10,22,40,.12); border-color: var(--teal); }
+.qa-icon { font-size: 1.8rem; margin-bottom: 8px; }
+.qa-label { font-size: .82rem; font-weight: 600; color: var(--navy); }
+
+/* transactions table */
+.card { background: var(--white); border-radius: var(--radius); box-shadow: var(--shadow); border: 1px solid rgba(10,22,40,.05); overflow: hidden; }
+.card-header { padding: 20px 24px; border-bottom: 1px solid rgba(10,22,40,.05); display: flex; justify-content: space-between; align-items: center; }
+.card-title { font-family: var(--font-head); font-size: 1.05rem; font-weight: 700; }
+.card-action { font-size: .8rem; color: var(--teal); font-weight: 600; cursor: pointer; }
+.card-action:hover { text-decoration: underline; }
+
+.txn-list { padding: 8px 0; }
+.txn-row {
+  display: flex; align-items: center; gap: 14px;
+  padding: 14px 24px; border-bottom: 1px solid rgba(10,22,40,.04);
+  transition: background var(--tr);
+}
+.txn-row:last-child { border: none; }
+.txn-row:hover { background: var(--off); }
+.txn-icon {
+  width: 42px; height: 42px; border-radius: 12px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center; font-size: 1.1rem;
+}
+.txn-icon.cr { background: rgba(0,201,167,.1); }
+.txn-icon.dr { background: rgba(255,77,109,.1); }
+.txn-icon.pn { background: rgba(244,197,66,.1); }
+.txn-info { flex: 1; }
+.txn-name { font-size: .88rem; font-weight: 600; }
+.txn-meta { font-size: .73rem; color: var(--grey); margin-top: 2px; }
+.txn-right { text-align: right; }
+.txn-amt  { font-size: .9rem; font-weight: 700; }
+.txn-amt.cr { color: var(--teal); }
+.txn-amt.dr { color: var(--red); }
+.txn-amt.pn { color: var(--gold); }
+.txn-status { font-size: .68rem; font-weight: 600; padding: 2px 8px; border-radius: 100px; margin-top: 4px; display: inline-block; }
+.txn-status.completed { background: rgba(0,201,167,.1); color: var(--teal2); }
+.txn-status.pending   { background: rgba(244,197,66,.1); color: #b8882a; }
+.txn-status.failed    { background: rgba(255,77,109,.1); color: var(--red); }
+
+/* empty state */
+.empty-state { text-align: center; padding: 48px 24px; color: var(--grey); }
+.empty-state .es-icon { font-size: 2.5rem; margin-bottom: 12px; opacity: .4; }
+.empty-state p { font-size: .88rem; }
+
+/* ── ADD MONEY PAGE ── */
+.page-header { margin-bottom: 28px; }
+.page-header h2 { font-family: var(--font-head); font-size: 1.6rem; font-weight: 700; margin-bottom: 6px; }
+.page-header p  { color: var(--grey); font-size: .9rem; }
+
+.deposit-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+.deposit-card { background: var(--white); border-radius: var(--radius); box-shadow: var(--shadow); border: 1px solid rgba(10,22,40,.05); padding: 32px; }
+.deposit-card h3 { font-family: var(--font-head); font-size: 1.1rem; font-weight: 700; margin-bottom: 6px; }
+.deposit-card > p { font-size: .85rem; color: var(--grey); margin-bottom: 24px; line-height: 1.65; }
+
+.amount-input-wrap { position: relative; margin-bottom: 20px; }
+.amount-currency {
+  position: absolute; left: 16px; top: 50%; transform: translateY(-50%);
+  font-size: 1.2rem; font-weight: 700; color: var(--grey);
+}
+.amount-input {
+  width: 100%; padding: 16px 16px 16px 42px;
+  border: 2px solid rgba(10,22,40,.1); border-radius: 12px;
+  font-family: var(--font-head); font-size: 1.6rem; font-weight: 700; color: var(--navy);
+  outline: none; transition: border-color var(--tr), box-shadow var(--tr);
+}
+.amount-input:focus { border-color: var(--teal); box-shadow: 0 0 0 3px rgba(0,201,167,.12); }
+
+.amount-presets { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; margin-bottom: 20px; }
+.preset-btn {
+  padding: 10px; border: 1.5px solid rgba(10,22,40,.1); border-radius: 10px;
+  background: var(--off); font-family: var(--font-body); font-size: .85rem; font-weight: 600;
+  color: var(--navy); cursor: pointer; transition: var(--tr); text-align: center;
+}
+.preset-btn:hover, .preset-btn.selected { border-color: var(--teal); background: rgba(0,201,167,.08); color: var(--teal2); }
+
+.field { margin-bottom: 18px; }
+.field label { display: block; font-size: .8rem; font-weight: 600; color: var(--navy); margin-bottom: 7px; }
+.field select, .field input, .field textarea {
+  width: 100%; padding: 12px 14px;
+  border: 1.5px solid rgba(10,22,40,.1); border-radius: 10px;
+  font-family: var(--font-body); font-size: .88rem; color: var(--navy);
+  outline: none; background: var(--white); transition: border-color var(--tr), box-shadow var(--tr); appearance: none;
+}
+.field select:focus, .field input:focus, .field textarea:focus { border-color: var(--teal); box-shadow: 0 0 0 3px rgba(0,201,167,.12); }
+.field textarea { resize: none; height: 80px; line-height: 1.55; }
+
+.btn-primary {
+  width: 100%; padding: 14px;
+  background: linear-gradient(135deg, var(--teal), var(--teal2));
+  color: var(--navy); border: none; border-radius: 12px;
+  font-family: var(--font-body); font-size: .95rem; font-weight: 700;
+  cursor: pointer; transition: var(--tr); display: flex; align-items: center; justify-content: center; gap: 8px;
+}
+.btn-primary:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,201,167,.35); }
+.btn-primary:disabled { opacity: .55; cursor: not-allowed; transform: none; }
+
+/* address display */
+.address-box {
+  display: none; background: var(--off); border: 1.5px solid rgba(0,201,167,.25);
+  border-radius: 14px; padding: 24px; margin-top: 20px;
+}
+.address-box.show { display: block; }
+.addr-label { font-size: .72rem; color: var(--grey); text-transform: uppercase; letter-spacing: .1em; margin-bottom: 10px; font-weight: 600; }
+.addr-method { font-family: var(--font-head); font-size: 1rem; font-weight: 700; color: var(--navy); margin-bottom: 16px; }
+
+.addr-item { margin-bottom: 14px; }
+.addr-item-label { font-size: .72rem; color: var(--grey); font-weight: 600; text-transform: uppercase; letter-spacing: .08em; margin-bottom: 5px; }
+.addr-value-wrap { display: flex; align-items: center; gap: 10px; }
+.addr-value {
+  flex: 1; background: var(--white); border: 1px solid rgba(10,22,40,.08);
+  border-radius: 8px; padding: 10px 14px;
+  font-size: .82rem; font-weight: 600; color: var(--navy);
+  word-break: break-all; font-family: 'Courier New', monospace;
+}
+.copy-btn {
+  flex-shrink: 0; padding: 10px 14px; background: var(--navy); color: var(--white);
+  border: none; border-radius: 8px; font-size: .75rem; font-weight: 600;
+  cursor: pointer; transition: var(--tr); font-family: var(--font-body);
+}
+.copy-btn:hover { background: var(--teal); color: var(--navy); }
+
+.addr-note {
+  background: rgba(244,197,66,.08); border: 1px solid rgba(244,197,66,.2);
+  border-radius: 10px; padding: 12px 14px; font-size: .8rem; color: #7a5f00;
+  line-height: 1.6; margin-top: 16px;
+}
+.addr-note strong { color: #5a4500; }
+
+.pending-badge {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: rgba(244,197,66,.1); border: 1px solid rgba(244,197,66,.25);
+  color: #b8882a; font-size: .75rem; font-weight: 600; padding: 5px 12px;
+  border-radius: 100px; margin-top: 12px;
+}
+
+/* ── RECEIVE PAGE ── */
+.receive-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+.receive-card { background: var(--white); border-radius: var(--radius); box-shadow: var(--shadow); border: 1px solid rgba(10,22,40,.05); padding: 32px; }
+.receive-card h3 { font-family: var(--font-head); font-size: 1.1rem; font-weight: 700; margin-bottom: 6px; }
+.receive-card > p { font-size: .85rem; color: var(--grey); margin-bottom: 24px; line-height: 1.65; }
+
+.account-detail { margin-bottom: 14px; }
+.ad-label { font-size: .72rem; color: var(--grey); text-transform: uppercase; letter-spacing: .08em; font-weight: 600; margin-bottom: 5px; }
+.ad-val-wrap { display: flex; align-items: center; gap: 10px; }
+.ad-val { flex: 1; background: var(--off); border: 1px solid rgba(10,22,40,.07); border-radius: 8px; padding: 11px 14px; font-size: .88rem; font-weight: 600; }
+.ad-copy { flex-shrink: 0; padding: 10px 14px; background: var(--navy); color: var(--white); border: none; border-radius: 8px; font-size: .75rem; font-weight: 600; cursor: pointer; transition: var(--tr); font-family: var(--font-body); }
+.ad-copy:hover { background: var(--teal); color: var(--navy); }
+
+/* share card */
+.share-card-preview {
+  background: linear-gradient(135deg, var(--navy), var(--navy3));
+  border-radius: 16px; padding: 28px; color: var(--white); text-align: center; margin-bottom: 20px; position: relative; overflow: hidden;
+}
+.share-card-preview::before {
+  content: ''; position: absolute; top: -30px; right: -30px; width: 120px; height: 120px;
+  background: radial-gradient(circle, rgba(0,201,167,.2), transparent 65%); border-radius: 50%;
+}
+.scp-logo { font-family: var(--font-head); font-size: .9rem; color: var(--teal); font-weight: 700; margin-bottom: 16px; }
+.scp-name { font-family: var(--font-head); font-size: 1.2rem; font-weight: 700; margin-bottom: 4px; }
+.scp-id   { font-size: .75rem; color: rgba(255,255,255,.4); font-family: monospace; }
+.scp-divider { border: none; border-top: 1px solid rgba(255,255,255,.08); margin: 16px 0; }
+.scp-label { font-size: .68rem; color: rgba(255,255,255,.35); text-transform: uppercase; letter-spacing: .1em; margin-bottom: 4px; }
+.scp-bank  { font-size: .85rem; font-weight: 600; color: rgba(255,255,255,.8); }
+
+.btn-share { width: 100%; padding: 13px; background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.1); border-radius: 10px; color: var(--white); font-family: var(--font-body); font-size: .88rem; font-weight: 600; cursor: pointer; transition: var(--tr); }
+.btn-share:hover { background: rgba(0,201,167,.15); border-color: var(--teal); }
+
+/* ── PROFILE PAGE ── */
+.profile-grid { display: grid; grid-template-columns: 320px 1fr; gap: 24px; }
+.profile-sidebar-card { background: var(--white); border-radius: var(--radius); box-shadow: var(--shadow); border: 1px solid rgba(10,22,40,.05); padding: 32px; text-align: center; }
+.profile-avatar-big {
+  width: 90px; height: 90px; border-radius: 50%;
+  background: linear-gradient(135deg, var(--teal), var(--gold));
+  display: flex; align-items: center; justify-content: center;
+  font-size: 2rem; font-weight: 700; color: var(--navy);
+  margin: 0 auto 16px;
+}
+.profile-fullname { font-family: var(--font-head); font-size: 1.3rem; font-weight: 700; margin-bottom: 4px; }
+.profile-email { font-size: .82rem; color: var(--grey); margin-bottom: 16px; }
+.profile-tag {
+  display: inline-block; background: rgba(0,201,167,.1); color: var(--teal2);
+  font-size: .72rem; font-weight: 600; padding: 4px 12px; border-radius: 100px;
+  margin-bottom: 24px;
+}
+.profile-stat { padding: 14px 0; border-top: 1px solid rgba(10,22,40,.05); display: flex; justify-content: space-between; }
+.ps-label { font-size: .78rem; color: var(--grey); }
+.ps-val   { font-size: .82rem; font-weight: 600; }
+
+.profile-details-card { background: var(--white); border-radius: var(--radius); box-shadow: var(--shadow); border: 1px solid rgba(10,22,40,.05); padding: 32px; }
+.profile-details-card h3 { font-family: var(--font-head); font-size: 1.1rem; font-weight: 700; margin-bottom: 24px; }
+.detail-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-bottom: 16px; }
+.detail-item label { font-size: .75rem; color: var(--grey); font-weight: 600; text-transform: uppercase; letter-spacing: .08em; margin-bottom: 5px; display: block; }
+.detail-item .dv { font-size: .9rem; font-weight: 500; padding: 10px 14px; background: var(--off); border-radius: 8px; }
+
+/* ── MODALS ── */
+.modal-overlay {
+  position: fixed; inset: 0; background: rgba(10,22,40,.55);
+  backdrop-filter: blur(4px); z-index: 500;
+  display: none; align-items: center; justify-content: center; padding: 24px;
+}
+.modal-overlay.show { display: flex; }
+.modal {
+  background: var(--white); border-radius: 20px; padding: 36px;
+  max-width: 440px; width: 100%; box-shadow: 0 32px 64px rgba(10,22,40,.25);
+  animation: slideUp .3s cubic-bezier(.4,0,.2,1);
+}
+@keyframes slideUp { from{transform:translateY(20px);opacity:0} to{transform:translateY(0);opacity:1} }
+.modal-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; }
+.modal-header h3 { font-family: var(--font-head); font-size: 1.3rem; font-weight: 700; }
+.modal-close { background: none; border: none; font-size: 1.2rem; cursor: pointer; color: var(--grey); transition: color var(--tr); padding: 0; }
+.modal-close:hover { color: var(--navy); }
+.modal p { font-size: .88rem; color: var(--grey); margin-bottom: 20px; line-height: 1.65; }
+
+/* toast */
+.toast {
+  position: fixed; bottom: 28px; right: 28px;
+  background: var(--navy); color: var(--white);
+  padding: 14px 20px; border-radius: 12px;
+  font-size: .85rem; font-weight: 600; z-index: 9999;
+  display: flex; align-items: center; gap: 10px;
+  transform: translateY(80px); opacity: 0;
+  transition: all .3s cubic-bezier(.4,0,.2,1);
+  box-shadow: 0 8px 32px rgba(10,22,40,.25);
+}
+.toast.show { transform: translateY(0); opacity: 1; }
+.toast.success { border-left: 4px solid var(--teal); }
+.toast.info    { border-left: 4px solid var(--gold); }
+
+/* ── RESPONSIVE ── */
+@media (max-width: 1024px) {
+  .stat-grid { grid-template-columns: repeat(2,1fr); }
+  .deposit-grid, .receive-grid, .profile-grid { grid-template-columns: 1fr; }
+}
+@media (max-width: 768px) {
+  .sidebar { transform: translateX(-100%); }
+  .sidebar.open { transform: translateX(0); }
+  .topbar { left: 0; }
+  .main { margin-left: 0; width: 100%; padding: 20px 16px; }
+  .hamburger-btn { display: block; }
+  .quick-actions { grid-template-columns: repeat(2,1fr); }
+  .stat-grid { grid-template-columns: repeat(2,1fr); }
+}
+@media (max-width: 480px) {
+  .stat-grid { grid-template-columns: 1fr; }
+  .quick-actions { grid-template-columns: repeat(2,1fr); }
+}
+
+/* overlay for mobile sidebar */
+.sidebar-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.4); z-index: 199; }
+.sidebar-overlay.show { display: block; }
+</style>
+</head>
+<body>
+
+<!-- SIDEBAR -->
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-logo">
+    <div class="logo-icon">🌊</div>
+    <span>TrustWave <em>Finance</em></span>
+  </div>
+  <div class="sidebar-user">
+    <div class="user-avatar" id="sidebarAvatar">JD</div>
+    <div>
+      <div class="user-name" id="sidebarName">Loading…</div>
+      <div class="user-accid" id="sidebarAccId">TW--------</div>
+    </div>
+  </div>
+  <nav class="sidebar-nav">
+    <div class="nav-section-label">Main</div>
+    <div class="nav-item active" onclick="showPage('overview')"><span class="ni-icon">🏠</span> Overview</div>
+    <div class="nav-item" onclick="showPage('addMoney')"><span class="ni-icon">➕</span> Add Money</div>
+    <div class="nav-item" onclick="showPage('receive')"><span class="ni-icon">📥</span> Receive Money</div>
+    <div class="nav-item" onclick="showPage('transactions')"><span class="ni-icon">📋</span> Transactions</div>
+    <div class="nav-section-label">Account</div>
+    <div class="nav-item" onclick="showPage('profile')"><span class="ni-icon">👤</span> Profile</div>
+    <div class="nav-item" onclick="showPage('settings')"><span class="ni-icon">⚙️</span> Settings</div>
+  </nav>
+  <div class="sidebar-footer">
+    <button class="btn-logout" onclick="logout()">🚪 Sign Out</button>
+  </div>
+</aside>
+<div class="sidebar-overlay" id="sidebarOverlay" onclick="closeSidebar()"></div>
+
+<!-- TOPBAR -->
+<div class="topbar">
+  <div style="display:flex;align-items:center;gap:12px">
+    <button class="hamburger-btn" onclick="toggleSidebar()">
+      <span></span><span></span><span></span>
+    </button>
+    <div class="topbar-title" id="topbarTitle">Overview</div>
+  </div>
+  <div class="topbar-right">
+    <div class="topbar-time" id="liveTime"></div>
+    <div class="topbar-notif" title="Notifications">🔔<div class="notif-dot"></div></div>
+  </div>
+</div>
+
+<!-- MAIN CONTENT -->
+<main class="main">
+
+  <!-- ── OVERVIEW ── -->
+  <div class="page-view active" id="page-overview">
+    <div class="welcome-banner">
+      <div class="wb-top">
+        <div>
+          <div class="wb-greeting" id="greeting">Good morning,</div>
+          <div class="wb-name" id="wbName">Loading…</div>
+          <div class="wb-id" id="wbId">Account ID: ––</div>
+        </div>
+        <div class="wb-badge" id="wbAccType">Personal</div>
+      </div>
+      <div class="balance-display">
+        <div class="bal-label">Total Balance</div>
+        <div>
+          <span class="bal-amount" id="balDisplay">$0.00</span>
+          <span class="bal-currency" id="balCurrency">USD</span>
+        </div>
+        <div class="bal-change" id="balChange">● Account Active</div>
+      </div>
+    </div>
+
+    <div class="stat-grid">
+      <div class="stat-card">
+        <div class="sc-top">
+          <div class="sc-label">Total Deposited</div>
+          <div class="sc-icon teal">💰</div>
+        </div>
+        <div class="sc-val" id="scDeposited">$0.00</div>
+        <div class="sc-sub pos" id="scDepositedSub">All time</div>
+      </div>
+      <div class="stat-card">
+        <div class="sc-top">
+          <div class="sc-label">Pending Deposits</div>
+          <div class="sc-icon gold">⏳</div>
+        </div>
+        <div class="sc-val" id="scPending">0</div>
+        <div class="sc-sub" id="scPendingSub">Awaiting confirmation</div>
+      </div>
+      <div class="stat-card">
+        <div class="sc-top">
+          <div class="sc-label">Transactions</div>
+          <div class="sc-icon blue">📊</div>
+        </div>
+        <div class="sc-val" id="scTxns">0</div>
+        <div class="sc-sub">Total records</div>
+      </div>
+      <div class="stat-card">
+        <div class="sc-top">
+          <div class="sc-label">Rewards Earned</div>
+          <div class="sc-icon gold">🎁</div>
+        </div>
+        <div class="sc-val">$0.00</div>
+        <div class="sc-sub">Cash rewards</div>
+      </div>
+    </div>
+
+    <div class="quick-actions">
+      <div class="qa-btn" onclick="showPage('addMoney')">
+        <div class="qa-icon">➕</div>
+        <div class="qa-label">Add Money</div>
+      </div>
+      <div class="qa-btn" onclick="showPage('receive')">
+        <div class="qa-icon">📥</div>
+        <div class="qa-label">Receive</div>
+      </div>
+      <div class="qa-btn" onclick="showPage('transactions')">
+        <div class="qa-icon">📋</div>
+        <div class="qa-label">Transactions</div>
+      </div>
+      <div class="qa-btn" onclick="showPage('profile')">
+        <div class="qa-icon">👤</div>
+        <div class="qa-label">Profile</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">Recent Transactions</div>
+        <div class="card-action" onclick="showPage('transactions')">View All →</div>
+      </div>
+      <div id="recentTxnList">
+        <div class="empty-state">
+          <div class="es-icon">💳</div>
+          <p>No transactions yet.<br>Add money to get started.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── ADD MONEY ── -->
+  <div class="page-view" id="page-addMoney">
+    <div class="page-header">
+      <h2>Add Money</h2>
+      <p>Choose your preferred payment method and enter the amount you'd like to deposit.</p>
+    </div>
+    <div class="deposit-grid">
+      <div class="deposit-card">
+        <h3>Deposit Request</h3>
+        <p>Select a payment method and amount. A payment address will be provided — send the exact amount and your balance will be updated by our team.</p>
+
+        <div class="field">
+          <label>Payment Method</label>
+          <select id="payMethod" onchange="onMethodChange()">
+            <option value="">— Select method —</option>
+            <optgroup label="Cryptocurrency">
+              <option value="bitcoin">Bitcoin (BTC)</option>
+              <option value="ethereum">Ethereum (ETH)</option>
+              <option value="usdt_trc20">USDT – TRC20 (Tron)</option>
+              <option value="usdt_erc20">USDT – ERC20 (Ethereum)</option>
+            </optgroup>
+            <optgroup label="Bank Transfer">
+              <option value="wire">Wire Transfer (SWIFT)</option>
+              <option value="ach">ACH Bank Transfer (US)</option>
+              <option value="sepa">SEPA Transfer (EU)</option>
+            </optgroup>
+            <optgroup label="Mobile Money">
+              <option value="mpesa">M-Pesa</option>
+              <option value="momo">MTN Mobile Money</option>
+            </optgroup>
+          </select>
+        </div>
+
+        <div>
+          <label style="font-size:.8rem;font-weight:600;color:var(--navy);display:block;margin-bottom:7px">Amount</label>
+          <div class="amount-input-wrap">
+            <span class="amount-currency">$</span>
+            <input class="amount-input" type="number" id="depositAmount" placeholder="0.00" min="10"/>
+          </div>
+        </div>
+
+        <div class="amount-presets">
+          <div class="preset-btn" onclick="setAmount(100)">$100</div>
+          <div class="preset-btn" onclick="setAmount(500)">$500</div>
+          <div class="preset-btn" onclick="setAmount(1000)">$1,000</div>
+          <div class="preset-btn" onclick="setAmount(2000)">$2,000</div>
+          <div class="preset-btn" onclick="setAmount(5000)">$5,000</div>
+          <div class="preset-btn" onclick="setAmount(10000)">$10,000</div>
+        </div>
+
+        <div class="field">
+          <label>Note (optional)</label>
+          <textarea id="depositNote" placeholder="Add a note for this deposit…"></textarea>
+        </div>
+
+        <button class="btn-primary" onclick="requestDeposit()">📨 Request Payment Address</button>
+
+        <!-- ADDRESS BOX (shown after request) -->
+        <div class="address-box" id="addressBox">
+          <div class="addr-label">Payment Instructions</div>
+          <div class="addr-method" id="addrMethodName"></div>
+          <div id="addrFields"></div>
+          <div class="addr-note">
+            <strong>⚠️ Important:</strong> Send <strong id="addrAmt"></strong> exactly to the address above.
+            After sending, click the button below to notify us. Your balance will be updated once we confirm the transaction (usually within 30–60 minutes for crypto, 1–2 business days for bank transfers).
+          </div>
+          <div style="margin-top:16px">
+            <button class="btn-primary" onclick="markSent()" style="background:linear-gradient(135deg,var(--navy),var(--navy2));color:var(--white)">✅ I've Sent the Payment</button>
+          </div>
+          <div class="pending-badge" id="pendingBadge" style="display:none">⏳ Payment Pending Confirmation</div>
+        </div>
+      </div>
+
+      <!-- Info panel -->
+      <div>
+        <div class="deposit-card" style="margin-bottom:20px">
+          <h3>How It Works</h3>
+          <p>Follow these simple steps to fund your account.</p>
+          <div style="display:flex;flex-direction:column;gap:16px">
+            <div style="display:flex;gap:14px;align-items:flex-start">
+              <div style="width:32px;height:32px;border-radius:50%;background:rgba(0,201,167,.12);color:var(--teal);font-weight:700;font-size:.85rem;display:flex;align-items:center;justify-content:center;flex-shrink:0">1</div>
+              <div><div style="font-weight:600;font-size:.88rem;margin-bottom:3px">Choose Method & Amount</div><div style="font-size:.8rem;color:var(--grey)">Select your preferred payment method and enter the deposit amount.</div></div>
+            </div>
+            <div style="display:flex;gap:14px;align-items:flex-start">
+              <div style="width:32px;height:32px;border-radius:50%;background:rgba(0,201,167,.12);color:var(--teal);font-weight:700;font-size:.85rem;display:flex;align-items:center;justify-content:center;flex-shrink:0">2</div>
+              <div><div style="font-weight:600;font-size:.88rem;margin-bottom:3px">Get Payment Address</div><div style="font-size:.8rem;color:var(--grey)">Click "Request Payment Address" to receive the address to send your funds to.</div></div>
+            </div>
+            <div style="display:flex;gap:14px;align-items:flex-start">
+              <div style="width:32px;height:32px;border-radius:50%;background:rgba(0,201,167,.12);color:var(--teal);font-weight:700;font-size:.85rem;display:flex;align-items:center;justify-content:center;flex-shrink:0">3</div>
+              <div><div style="font-weight:600;font-size:.88rem;margin-bottom:3px">Send the Funds</div><div style="font-size:.8rem;color:var(--grey)">Transfer the exact amount to the provided address and notify us.</div></div>
+            </div>
+            <div style="display:flex;gap:14px;align-items:flex-start">
+              <div style="width:32px;height:32px;border-radius:50%;background:rgba(0,201,167,.12);color:var(--teal);font-weight:700;font-size:.85rem;display:flex;align-items:center;justify-content:center;flex-shrink:0">4</div>
+              <div><div style="font-weight:600;font-size:.88rem;margin-bottom:3px">Balance Updated</div><div style="font-size:.8rem;color:var(--grey)">Our team confirms and credits your account, usually within 1 hour.</div></div>
+            </div>
+          </div>
+        </div>
+        <div class="deposit-card" style="background:linear-gradient(135deg,var(--navy),var(--navy2));color:var(--white)">
+          <h3 style="color:var(--white)">Need Help?</h3>
+          <p style="color:rgba(255,255,255,.5);margin-bottom:20px">Having trouble with your deposit? Our support team is available 24/7.</p>
+          <a href="mailto:support@trustwavefinance.com" style="display:inline-flex;align-items:center;gap:8px;background:rgba(0,201,167,.15);border:1px solid rgba(0,201,167,.25);color:var(--teal);padding:10px 18px;border-radius:10px;font-size:.85rem;font-weight:600;transition:var(--tr)" onmouseover="this.style.background='rgba(0,201,167,.25)'" onmouseout="this.style.background='rgba(0,201,167,.15)'">✉️ support@trustwavefinance.com</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── RECEIVE MONEY ── -->
+  <div class="page-view" id="page-receive">
+    <div class="page-header">
+      <h2>Receive Money</h2>
+      <p>Share your account details with anyone who wants to send you money.</p>
+    </div>
+    <div class="receive-grid">
+      <div class="receive-card">
+        <h3>Your Account Details</h3>
+        <p>Share the information below to receive a bank transfer directly into your TrustWave account.</p>
+        <div class="account-detail">
+          <div class="ad-label">Account Name</div>
+          <div class="ad-val-wrap">
+            <div class="ad-val" id="rcvName">––</div>
+            <button class="ad-copy" onclick="copyVal('rcvName','Account name')">Copy</button>
+          </div>
+        </div>
+        <div class="account-detail">
+          <div class="ad-label">Account ID / Number</div>
+          <div class="ad-val-wrap">
+            <div class="ad-val" id="rcvAccId">––</div>
+            <button class="ad-copy" onclick="copyVal('rcvAccId','Account ID')">Copy</button>
+          </div>
+        </div>
+        <div class="account-detail">
+          <div class="ad-label">Account Type</div>
+          <div class="ad-val-wrap">
+            <div class="ad-val" id="rcvAccType">––</div>
+          </div>
+        </div>
+        <div class="account-detail">
+          <div class="ad-label">Bank Name</div>
+          <div class="ad-val-wrap">
+            <div class="ad-val">TrustWave Finance</div>
+            <button class="ad-copy" onclick="copyText('TrustWave Finance','Bank name')">Copy</button>
+          </div>
+        </div>
+        <div class="account-detail">
+          <div class="ad-label">Routing / SWIFT Code</div>
+          <div class="ad-val-wrap">
+            <div class="ad-val">TWFIUS33XXX</div>
+            <button class="ad-copy" onclick="copyText('TWFIUS33XXX','SWIFT code')">Copy</button>
+          </div>
+        </div>
+        <div class="account-detail">
+          <div class="ad-label">Currency</div>
+          <div class="ad-val-wrap">
+            <div class="ad-val" id="rcvCurrency">––</div>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <div class="receive-card" style="margin-bottom:20px">
+          <h3>Payment Card</h3>
+          <p>Share this card with the sender for all necessary details.</p>
+          <div class="share-card-preview">
+            <div class="scp-logo">🌊 TrustWave Finance</div>
+            <div class="scp-name" id="scpName">––</div>
+            <div class="scp-id"   id="scpId">Account: ––</div>
+            <hr class="scp-divider"/>
+            <div class="scp-label">Bank</div>
+            <div class="scp-bank">TrustWave Finance · TWFIUS33XXX</div>
+          </div>
+          <button class="btn-share" onclick="shareDetails()">📤 Share Account Details</button>
+        </div>
+
+        <div class="receive-card" style="background:linear-gradient(135deg,var(--navy),var(--navy2));border:none">
+          <h3 style="color:var(--white)">Expected a Transfer?</h3>
+          <p style="color:rgba(255,255,255,.5);margin-bottom:20px">If someone has already sent money to your account, contact our support team to confirm the transfer.</p>
+          <a href="mailto:support@trustwavefinance.com" style="display:inline-flex;align-items:center;gap:8px;background:rgba(0,201,167,.15);border:1px solid rgba(0,201,167,.25);color:var(--teal);padding:10px 18px;border-radius:10px;font-size:.85rem;font-weight:600">✉️ Contact Support</a>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── TRANSACTIONS ── -->
+  <div class="page-view" id="page-transactions">
+    <div class="page-header">
+      <h2>Transactions</h2>
+      <p>Your full transaction history.</p>
+    </div>
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">All Transactions</div>
+      </div>
+      <div id="allTxnList">
+        <div class="empty-state">
+          <div class="es-icon">📋</div>
+          <p>No transactions yet.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── PROFILE ── -->
+  <div class="page-view" id="page-profile">
+    <div class="page-header">
+      <h2>My Profile</h2>
+      <p>Your personal and account information.</p>
+    </div>
+    <div class="profile-grid">
+      <div class="profile-sidebar-card">
+        <div class="profile-avatar-big" id="profAvatar">JD</div>
+        <div class="profile-fullname" id="profName">––</div>
+        <div class="profile-email" id="profEmail">––</div>
+        <div class="profile-tag" id="profAccType">––</div>
+        <div class="profile-stat"><span class="ps-label">Account ID</span><span class="ps-val" id="profAccId">––</span></div>
+        <div class="profile-stat"><span class="ps-label">Currency</span><span class="ps-val" id="profCurrency">––</span></div>
+        <div class="profile-stat"><span class="ps-label">Member Since</span><span class="ps-val" id="profSince">––</span></div>
+        <div class="profile-stat"><span class="ps-label">Country</span><span class="ps-val" id="profCountry">––</span></div>
+      </div>
+      <div class="profile-details-card">
+        <h3>Account Details</h3>
+        <div class="detail-row">
+          <div class="detail-item"><label>First Name</label><div class="dv" id="pdFirst">––</div></div>
+          <div class="detail-item"><label>Last Name</label><div class="dv" id="pdLast">––</div></div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-item"><label>Email</label><div class="dv" id="pdEmail">––</div></div>
+          <div class="detail-item"><label>Phone</label><div class="dv" id="pdPhone">––</div></div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-item"><label>Username</label><div class="dv" id="pdUsername">––</div></div>
+          <div class="detail-item"><label>Date of Birth</label><div class="dv" id="pdDob">––</div></div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-item"><label>Country</label><div class="dv" id="pdCountry">––</div></div>
+          <div class="detail-item"><label>Account Type</label><div class="dv" id="pdAccType">––</div></div>
+        </div>
+        <div class="detail-row">
+          <div class="detail-item"><label>Account ID</label><div class="dv" id="pdAccId">––</div></div>
+          <div class="detail-item"><label>Currency</label><div class="dv" id="pdCurrency">––</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ── SETTINGS ── -->
+  <div class="page-view" id="page-settings">
+    <div class="page-header"><h2>Settings</h2><p>Manage your account preferences.</p></div>
+    <div class="card" style="padding:32px;max-width:560px">
+      <div class="card-title" style="margin-bottom:24px">Account Settings</div>
+      <div style="display:flex;flex-direction:column;gap:20px">
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:16px;background:var(--off);border-radius:12px">
+          <div><div style="font-weight:600;font-size:.9rem">Email Notifications</div><div style="font-size:.78rem;color:var(--grey)">Receive updates about your account</div></div>
+          <label style="position:relative;display:inline-block;width:44px;height:24px">
+            <input type="checkbox" checked style="opacity:0;width:0;height:0" id="emailNotif">
+            <span onclick="this.style.background=document.getElementById('emailNotif').checked?'var(--teal)':'rgba(10,22,40,.15)'" style="position:absolute;cursor:pointer;inset:0;background:var(--teal);border-radius:24px;transition:.3s"></span>
+          </label>
+        </div>
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:16px;background:var(--off);border-radius:12px">
+          <div><div style="font-weight:600;font-size:.9rem">Two-Factor Authentication</div><div style="font-size:.78rem;color:var(--grey)">Add an extra layer of security</div></div>
+          <label style="position:relative;display:inline-block;width:44px;height:24px">
+            <input type="checkbox" style="opacity:0;width:0;height:0">
+            <span style="position:absolute;cursor:pointer;inset:0;background:rgba(10,22,40,.15);border-radius:24px;transition:.3s"></span>
+          </label>
+        </div>
+        <div style="padding:16px;background:rgba(255,77,109,.04);border:1px solid rgba(255,77,109,.12);border-radius:12px">
+          <div style="font-weight:600;font-size:.9rem;margin-bottom:4px;color:var(--red)">Danger Zone</div>
+          <div style="font-size:.78rem;color:var(--grey);margin-bottom:14px">These actions are permanent and cannot be undone.</div>
+          <button onclick="logout()" style="padding:10px 20px;background:rgba(255,77,109,.1);border:1px solid rgba(255,77,109,.25);color:var(--red);border-radius:8px;font-family:var(--font-body);font-size:.85rem;font-weight:600;cursor:pointer">Sign Out of All Devices</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ── PAYMENT ADDRESSES (admin-set) ─────────────────────
+// You can update these addresses at any time
+const PAYMENT_ADDRESSES = {
+  bitcoin: {
+    label: 'Bitcoin (BTC)',
+    fields: [
+      { label: 'BTC Wallet Address', value: '1A1zP1eP5QGefi2DMPTfTL5SLmv7Divf' }
+    ]
+  },
+  ethereum: {
+    label: 'Ethereum (ETH)',
+    fields: [
+      { label: 'ETH Wallet Address', value: '0x71C7656EC7ab88b098defB751B7401B5f6d8976F' }
+    ]
+  },
+  usdt_trc20: {
+    label: 'USDT – TRC20 (Tron)',
+    fields: [
+      { label: 'TRC20 Wallet Address', value: 'TGj1Ej1qRzL9feLTLhjwgxXF4Ct6GTWg2U' }
+    ]
+  },
+  usdt_erc20: {
+    label: 'USDT – ERC20',
+    fields: [
+      { label: 'ERC20 Wallet Address', value: '0x71C7656EC7ab88b098defB751B7401B5f6d8976F' }
+    ]
+  },
+  wire: {
+    label: 'Wire Transfer (SWIFT)',
+    fields: [
+      { label: 'Bank Name',      value: 'TrustWave Finance Bank' },
+      { label: 'Account Name',   value: 'TrustWave Finance Ltd' },
+      { label: 'Account Number', value: '0012345678' },
+      { label: 'SWIFT / BIC',    value: 'TWFIUS33XXX' },
+      { label: 'Routing Number', value: '021000021' }
+    ]
+  },
+  ach: {
+    label: 'ACH Bank Transfer (US)',
+    fields: [
+      { label: 'Bank Name',      value: 'TrustWave Finance Bank' },
+      { label: 'Account Name',   value: 'TrustWave Finance Ltd' },
+      { label: 'Account Number', value: '0012345678' },
+      { label: 'Routing Number', value: '021000021' }
+    ]
+  },
+  sepa: {
+    label: 'SEPA Transfer (EU)',
+    fields: [
+      { label: 'Bank Name', value: 'TrustWave Finance Bank' },
+      { label: 'IBAN',      value: 'GB29NWBK60161331926819' },
+      { label: 'BIC/SWIFT', value: 'TWFIGB2LXXX' }
+    ]
+  },
+  mpesa: {
+    label: 'M-Pesa',
+    fields: [
+      { label: 'M-Pesa Till / Paybill', value: '522533' },
+      { label: 'Account Number',        value: 'TRUSTWAVE' }
+    ]
+  },
+  momo: {
+    label: 'MTN Mobile Money',
+    fields: [
+      { label: 'MTN MoMo Number', value: '+233 24 000 0000' },
+      { label: 'Account Name',    value: 'TrustWave Finance' }
+    ]
+  }
+};
+
+// ── LOAD USER ─────────────────────────────────────────
+let user = null;
+let txns = [];
+
+function loadUser() {
+  user = JSON.parse(localStorage.getItem('tw_current_user') || 'null');
+  if (!user) { window.location.href = 'login.html'; return; }
+
+  // Init balance and txns if not present
+  if (user.balance === undefined) user.balance = 0;
+  txns = JSON.parse(localStorage.getItem('tw_txns_' + user.accountId) || '[]');
+
+  renderAll();
+}
+
+function saveUser() {
+  localStorage.setItem('tw_current_user', JSON.stringify(user));
+  // Also update in users array
+  const users = JSON.parse(localStorage.getItem('tw_users') || '[]');
+  const idx = users.findIndex(u => u.accountId === user.accountId);
+  if (idx !== -1) { users[idx] = user; localStorage.setItem('tw_users', JSON.stringify(users)); }
+}
+
+function saveTxns() {
+  localStorage.setItem('tw_txns_' + user.accountId, JSON.stringify(txns));
+}
+
+function renderAll() {
+  const initials = (user.firstName[0] + user.lastName[0]).toUpperCase();
+  const fullName = user.firstName + ' ' + user.lastName;
+
+  // Sidebar
+  document.getElementById('sidebarAvatar').textContent = initials;
+  document.getElementById('sidebarName').textContent   = fullName;
+  document.getElementById('sidebarAccId').textContent  = user.accountId;
+
+  // Overview
+  const hr = new Date().getHours();
+  const greet = hr < 12 ? 'Good morning,' : hr < 17 ? 'Good afternoon,' : 'Good evening,';
+  document.getElementById('greeting').textContent  = greet;
+  document.getElementById('wbName').textContent    = fullName;
+  document.getElementById('wbId').textContent      = 'Account ID: ' + user.accountId;
+  document.getElementById('wbAccType').textContent = user.accType || 'Personal';
+
+  const bal = user.balance || 0;
+  const cur = (user.currency || 'USD – US Dollar').split('–')[0].trim();
+  document.getElementById('balDisplay').textContent  = '$' + bal.toLocaleString('en-US', {minimumFractionDigits:2, maximumFractionDigits:2});
+  document.getElementById('balCurrency').textContent = cur;
+
+  // Stats
+  const totalDep = txns.filter(t=>t.type==='cr'&&t.status==='completed').reduce((s,t)=>s+t.amount,0);
+  const pending  = txns.filter(t=>t.status==='pending').length;
+  document.getElementById('scDeposited').textContent  = '$' + totalDep.toLocaleString('en-US',{minimumFractionDigits:2});
+  document.getElementById('scPending').textContent    = pending;
+  document.getElementById('scTxns').textContent       = txns.length;
+
+  // Transactions
+  renderTxnList('recentTxnList', txns.slice(-5).reverse());
+  renderTxnList('allTxnList', [...txns].reverse());
+
+  // Receive
+  document.getElementById('rcvName').textContent    = fullName;
+  document.getElementById('rcvAccId').textContent   = user.accountId;
+  document.getElementById('rcvAccType').textContent = user.accType || '––';
+  document.getElementById('rcvCurrency').textContent= user.currency || '––';
+  document.getElementById('scpName').textContent    = fullName;
+  document.getElementById('scpId').textContent      = 'Account: ' + user.accountId;
+
+  // Profile
+  document.getElementById('profAvatar').textContent   = initials;
+  document.getElementById('profName').textContent     = fullName;
+  document.getElementById('profEmail').textContent    = user.email;
+  document.getElementById('profAccType').textContent  = user.accType || '––';
+  document.getElementById('profAccId').textContent    = user.accountId;
+  document.getElementById('profCurrency').textContent = user.currency || '––';
+  document.getElementById('profSince').textContent    = user.createdAt || '––';
+  document.getElementById('profCountry').textContent  = user.country || '––';
+  document.getElementById('pdFirst').textContent      = user.firstName;
+  document.getElementById('pdLast').textContent       = user.lastName;
+  document.getElementById('pdEmail').textContent      = user.email;
+  document.getElementById('pdPhone').textContent      = user.phone || '––';
+  document.getElementById('pdUsername').textContent   = user.username;
+  document.getElementById('pdDob').textContent        = user.dob || '––';
+  document.getElementById('pdCountry').textContent    = user.country || '––';
+  document.getElementById('pdAccType').textContent    = user.accType || '––';
+  document.getElementById('pdAccId').textContent      = user.accountId;
+  document.getElementById('pdCurrency').textContent   = user.currency || '––';
+}
+
+function renderTxnList(containerId, list) {
+  const el = document.getElementById(containerId);
+  if (!list.length) {
+    el.innerHTML = '<div class="empty-state"><div class="es-icon">💳</div><p>No transactions yet.<br>Add money to get started.</p></div>';
+    return;
+  }
+  el.innerHTML = '<div class="txn-list">' + list.map(t => {
+    const icon = t.type === 'cr' ? '💰' : t.type === 'pn' ? '⏳' : '💸';
+    const amtClass = t.type === 'cr' ? 'cr' : t.type === 'pn' ? 'pn' : 'dr';
+    const amtPrefix = t.type === 'cr' ? '+' : t.type === 'pn' ? '~' : '-';
+    return `<div class="txn-row">
+      <div class="txn-icon ${amtClass}">${icon}</div>
+      <div class="txn-info">
+        <div class="txn-name">${t.name}</div>
+        <div class="txn-meta">${t.date} · ${t.method || 'TrustWave'}</div>
+      </div>
+      <div class="txn-right">
+        <div class="txn-amt ${amtClass}">${amtPrefix}$${t.amount.toLocaleString('en-US',{minimumFractionDigits:2})}</div>
+        <div class="txn-status ${t.status}">${t.status}</div>
+      </div>
+    </div>`;
+  }).join('') + '</div>';
+}
+
+// ── DEPOSIT FLOW ──────────────────────────────────────
+function setAmount(v) {
+  document.getElementById('depositAmount').value = v;
+  document.querySelectorAll('.preset-btn').forEach(b => {
+    b.classList.toggle('selected', parseInt(b.textContent.replace(/[^0-9]/g,'')) === v);
+  });
+}
+
+function onMethodChange() {
+  document.getElementById('addressBox').classList.remove('show');
+  document.getElementById('pendingBadge').style.display = 'none';
+}
+
+function requestDeposit() {
+  const method = document.getElementById('payMethod').value;
+  const amount = parseFloat(document.getElementById('depositAmount').value);
+
+  if (!method) { showToast('⚠️ Please select a payment method.', 'info'); return; }
+  if (!amount || amount < 10) { showToast('⚠️ Minimum deposit is $10.', 'info'); return; }
+
+  const cfg = PAYMENT_ADDRESSES[method];
+  if (!cfg) { showToast('Method not configured yet.', 'info'); return; }
+
+  // Render address fields
+  document.getElementById('addrMethodName').textContent = cfg.label;
+  document.getElementById('addrAmt').textContent = '$' + amount.toLocaleString('en-US',{minimumFractionDigits:2});
+
+  let fieldsHtml = '';
+  cfg.fields.forEach(f => {
+    fieldsHtml += `<div class="addr-item">
+      <div class="addr-item-label">${f.label}</div>
+      <div class="addr-value-wrap">
+        <div class="addr-value" id="adv_${f.label.replace(/\s/g,'')}">${f.value}</div>
+        <button class="copy-btn" onclick="copyText('${f.value}','${f.label}')">Copy</button>
+      </div>
+    </div>`;
+  });
+  document.getElementById('addrFields').innerHTML = fieldsHtml;
+  document.getElementById('pendingBadge').style.display = 'none';
+  document.getElementById('addressBox').classList.add('show');
+
+  // Record as pending transaction
+  const txnId = 'TXN' + Date.now();
+  const pending = {
+    id: txnId, type: 'pn', status: 'pending',
+    name: 'Deposit via ' + cfg.label,
+    amount: amount, method: cfg.label,
+    date: new Date().toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'numeric'})
+  };
+  txns.push(pending);
+  saveTxns(); renderAll();
+  showToast('✅ Payment address ready! Send the exact amount.', 'success');
+}
+
+function markSent() {
+  document.getElementById('pendingBadge').style.display = 'flex';
+  showToast('📨 We\'ve been notified. Your balance will update once confirmed.', 'success');
+  document.querySelector('.address-box .btn-primary').disabled = true;
+  document.querySelector('.address-box .btn-primary').textContent = '✅ Notification Sent';
+}
+
+// ── COPY HELPERS ──────────────────────────────────────
+function copyVal(elId, label) {
+  const text = document.getElementById(elId).textContent;
+  copyText(text, label);
+}
+function copyText(text, label) {
+  navigator.clipboard.writeText(text).then(() => {
+    showToast('📋 ' + (label || 'Value') + ' copied!', 'success');
+  }).catch(() => {
+    showToast('Copy failed. Please copy manually.', 'info');
+  });
+}
+
+function shareDetails() {
+  const text = `TrustWave Finance – Account Details\nName: ${user.firstName} ${user.lastName}\nAccount ID: ${user.accountId}\nBank: TrustWave Finance\nSWIFT: TWFIUS33XXX`;
+  if (navigator.share) {
+    navigator.share({ title: 'TrustWave Finance Account', text }).catch(()=>{});
+  } else {
+    navigator.clipboard.writeText(text).then(()=> showToast('📋 Account details copied!','success'));
+  }
+}
+
+// ── NAVIGATION ────────────────────────────────────────
+const pageNames = { overview:'Overview', addMoney:'Add Money', receive:'Receive Money', transactions:'Transactions', profile:'Profile', settings:'Settings' };
+
+function showPage(id) {
+  document.querySelectorAll('.page-view').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('page-' + id).classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(n => {
+    if (n.textContent.trim().includes(pageNames[id])) n.classList.add('active');
+  });
+  document.getElementById('topbarTitle').textContent = pageNames[id] || id;
+  closeSidebar();
+  renderAll();
+}
+
+// ── SIDEBAR MOBILE ────────────────────────────────────
+function toggleSidebar() {
+  document.getElementById('sidebar').classList.toggle('open');
+  document.getElementById('sidebarOverlay').classList.toggle('show');
+}
+function closeSidebar() {
+  document.getElementById('sidebar').classList.remove('open');
+  document.getElementById('sidebarOverlay').classList.remove('show');
+}
+
+// ── TOAST ─────────────────────────────────────────────
+let toastTimer;
+function showToast(msg, type='success') {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.className = 'toast ' + type + ' show';
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 3500);
+}
+
+// ── LIVE CLOCK ────────────────────────────────────────
+function updateClock() {
+  document.getElementById('liveTime').textContent = new Date().toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit'});
+}
+setInterval(updateClock, 1000); updateClock();
+
+// ── LOGOUT ────────────────────────────────────────────
+function logout() {
+  localStorage.removeItem('tw_current_user');
+  window.location.href = 'login.html';
+}
+
+// ── INIT ──────────────────────────────────────────────
+loadUser();
+</script>
+</body>
+</html>

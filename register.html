@@ -1,0 +1,747 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<meta name="description" content="Create your TrustWave Finance account"/>
+<title>Create Account – TrustWave Finance</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --navy:  #0a1628;
+    --navy2: #0f2044;
+    --teal:  #00c9a7;
+    --teal2: #00a88a;
+    --gold:  #f4c542;
+    --white: #ffffff;
+    --off:   #f4f7fb;
+    --grey:  #8a96a8;
+    --red:   #ff4d6d;
+    --green: #00c9a7;
+    --shadow: 0 8px 40px rgba(10,22,40,.13);
+    --radius: 14px;
+    --font-head: 'Playfair Display', Georgia, serif;
+    --font-body: 'DM Sans', sans-serif;
+    --tr: .25s cubic-bezier(.4,0,.2,1);
+  }
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: var(--font-body);
+    background: var(--off);
+    color: var(--navy);
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+  }
+  a { text-decoration: none; color: inherit; }
+
+  /* ── NAV ── */
+  nav {
+    background: var(--navy);
+    padding: 0 32px;
+    height: 64px;
+    display: flex; align-items: center; justify-content: space-between;
+    position: sticky; top: 0; z-index: 100;
+  }
+  .logo {
+    display: flex; align-items: center; gap: 9px;
+    font-family: var(--font-head); font-size: 1.15rem; font-weight: 700;
+    color: var(--white);
+  }
+  .logo-icon {
+    width: 32px; height: 32px;
+    background: linear-gradient(135deg, var(--teal), var(--teal2));
+    border-radius: 9px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1rem;
+  }
+  .logo span { color: var(--teal); }
+  .nav-back {
+    font-size: .85rem; color: rgba(255,255,255,.55);
+    display: flex; align-items: center; gap: 6px;
+    transition: color var(--tr);
+  }
+  .nav-back:hover { color: var(--teal); }
+
+  /* ── LAYOUT ── */
+  .page {
+    flex: 1;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    min-height: calc(100vh - 64px);
+  }
+
+  /* ── LEFT PANEL ── */
+  .left-panel {
+    background: linear-gradient(145deg, var(--navy), var(--navy2));
+    padding: 64px 56px;
+    display: flex; flex-direction: column; justify-content: center;
+    position: relative; overflow: hidden;
+  }
+  .left-panel::before {
+    content: '';
+    position: absolute; bottom: -80px; right: -80px;
+    width: 360px; height: 360px;
+    background: radial-gradient(circle, rgba(0,201,167,.2), transparent 65%);
+    border-radius: 50%;
+  }
+  .left-panel::after {
+    content: '';
+    position: absolute; top: -40px; left: -40px;
+    width: 200px; height: 200px;
+    background: radial-gradient(circle, rgba(244,197,66,.08), transparent 65%);
+    border-radius: 50%;
+  }
+  .left-badge {
+    display: inline-flex; align-items: center; gap: 7px;
+    background: rgba(0,201,167,.12);
+    border: 1px solid rgba(0,201,167,.2);
+    color: var(--teal);
+    font-size: .72rem; font-weight: 600; letter-spacing: .1em; text-transform: uppercase;
+    padding: 5px 12px; border-radius: 100px; width: fit-content;
+    margin-bottom: 28px; position: relative;
+  }
+  .left-panel h1 {
+    font-family: var(--font-head);
+    font-size: clamp(1.8rem, 3vw, 2.5rem);
+    font-weight: 900; color: var(--white);
+    line-height: 1.15; margin-bottom: 16px;
+    position: relative;
+  }
+  .left-panel h1 em { color: var(--teal); font-style: normal; }
+  .left-panel p {
+    color: rgba(255,255,255,.5); font-size: .95rem;
+    line-height: 1.75; max-width: 360px;
+    margin-bottom: 48px; position: relative;
+  }
+  .perks { display: flex; flex-direction: column; gap: 16px; position: relative; }
+  .perk {
+    display: flex; align-items: flex-start; gap: 14px;
+  }
+  .perk-icon {
+    flex-shrink: 0;
+    width: 40px; height: 40px;
+    background: rgba(0,201,167,.1);
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.1rem;
+  }
+  .perk-text h4 { color: var(--white); font-size: .9rem; font-weight: 600; margin-bottom: 2px; }
+  .perk-text p  { color: rgba(255,255,255,.4); font-size: .8rem; }
+
+  /* ── RIGHT PANEL ── */
+  .right-panel {
+    background: var(--white);
+    padding: 56px 52px;
+    display: flex; flex-direction: column; justify-content: center;
+    overflow-y: auto;
+  }
+  .form-header { margin-bottom: 36px; }
+  .form-header h2 {
+    font-family: var(--font-head);
+    font-size: 1.9rem; font-weight: 700;
+    color: var(--navy); margin-bottom: 8px;
+  }
+  .form-header p { color: var(--grey); font-size: .9rem; }
+  .form-header p a { color: var(--teal); font-weight: 600; }
+  .form-header p a:hover { text-decoration: underline; }
+
+  /* steps indicator */
+  .steps {
+    display: flex; gap: 0; margin-bottom: 36px;
+    border-radius: 100px; overflow: hidden;
+    background: var(--off); padding: 4px; border: 1px solid rgba(10,22,40,.06);
+  }
+  .step-btn {
+    flex: 1; text-align: center;
+    font-size: .8rem; font-weight: 600;
+    padding: 8px 0; border-radius: 100px;
+    color: var(--grey); cursor: pointer; transition: var(--tr);
+  }
+  .step-btn.active { background: var(--navy); color: var(--white); }
+  .step-btn.done   { color: var(--teal); }
+
+  /* form */
+  .form-step { display: none; }
+  .form-step.active { display: block; }
+
+  .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .field { margin-bottom: 20px; }
+  .field label {
+    display: block; font-size: .8rem; font-weight: 600;
+    color: var(--navy); margin-bottom: 7px;
+    letter-spacing: .02em;
+  }
+  .field label span { color: var(--red); }
+  .input-wrap { position: relative; }
+  .input-wrap .icon {
+    position: absolute; left: 14px; top: 50%; transform: translateY(-50%);
+    font-size: 1rem; pointer-events: none;
+  }
+  .field input, .field select {
+    width: 100%;
+    padding: 13px 14px 13px 42px;
+    border: 1.5px solid rgba(10,22,40,.1);
+    border-radius: 10px;
+    font-family: var(--font-body); font-size: .9rem;
+    color: var(--navy); background: var(--white);
+    transition: border-color var(--tr), box-shadow var(--tr);
+    outline: none; appearance: none;
+  }
+  .field input:focus, .field select:focus {
+    border-color: var(--teal);
+    box-shadow: 0 0 0 3px rgba(0,201,167,.12);
+  }
+  .field input.error { border-color: var(--red); box-shadow: 0 0 0 3px rgba(255,77,109,.1); }
+  .field input.valid { border-color: var(--green); }
+  .field-hint { font-size: .75rem; color: var(--grey); margin-top: 5px; }
+  .field-error { font-size: .75rem; color: var(--red); margin-top: 5px; display: none; }
+  .field-error.show { display: block; }
+
+  /* password strength */
+  .pw-strength { margin-top: 8px; }
+  .pw-bars { display: flex; gap: 4px; margin-bottom: 4px; }
+  .pw-bar { height: 4px; flex: 1; border-radius: 2px; background: rgba(10,22,40,.08); transition: background var(--tr); }
+  .pw-bar.weak   { background: #ff4d6d; }
+  .pw-bar.fair   { background: var(--gold); }
+  .pw-bar.strong { background: var(--teal); }
+  .pw-label { font-size: .72rem; color: var(--grey); }
+
+  /* toggle password */
+  .pw-toggle {
+    position: absolute; right: 14px; top: 50%; transform: translateY(-50%);
+    cursor: pointer; font-size: .85rem; color: var(--grey);
+    user-select: none; transition: color var(--tr);
+  }
+  .pw-toggle:hover { color: var(--teal); }
+
+  /* checkbox */
+  .check-field { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 20px; }
+  .check-field input[type=checkbox] { width: 18px; height: 18px; accent-color: var(--teal); flex-shrink: 0; margin-top: 2px; cursor: pointer; }
+  .check-field label { font-size: .83rem; color: #4a5568; cursor: pointer; }
+  .check-field label a { color: var(--teal); font-weight: 600; }
+  .check-field label a:hover { text-decoration: underline; }
+
+  /* buttons */
+  .btn-submit {
+    width: 100%; padding: 15px;
+    background: linear-gradient(135deg, var(--teal), var(--teal2));
+    color: var(--navy); font-family: var(--font-body);
+    font-size: .95rem; font-weight: 700;
+    border: none; border-radius: 10px;
+    cursor: pointer; transition: var(--tr);
+    display: flex; align-items: center; justify-content: center; gap: 8px;
+    margin-top: 4px;
+  }
+  .btn-submit:hover { transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,201,167,.35); }
+  .btn-submit:disabled { opacity: .6; cursor: not-allowed; transform: none; }
+  .btn-back {
+    background: none; border: 1.5px solid rgba(10,22,40,.12);
+    color: var(--grey); font-family: var(--font-body);
+    font-size: .9rem; font-weight: 600;
+    padding: 13px; border-radius: 10px;
+    cursor: pointer; transition: var(--tr); width: 100%;
+    margin-bottom: 12px;
+  }
+  .btn-back:hover { border-color: var(--navy); color: var(--navy); }
+
+  .divider { display: flex; align-items: center; gap: 12px; margin: 20px 0; }
+  .divider hr { flex: 1; border: none; border-top: 1px solid rgba(10,22,40,.08); }
+  .divider span { font-size: .78rem; color: var(--grey); white-space: nowrap; }
+
+  /* ── SUCCESS SCREEN ── */
+  .success-screen {
+    display: none; text-align: center; padding: 20px 0;
+  }
+  .success-screen.show { display: block; }
+  .success-icon {
+    width: 80px; height: 80px;
+    background: linear-gradient(135deg, rgba(0,201,167,.15), rgba(0,201,167,.05));
+    border-radius: 50%; display: flex; align-items: center; justify-content: center;
+    font-size: 2.5rem; margin: 0 auto 24px;
+    animation: pop .5s cubic-bezier(.4,0,.2,1);
+  }
+  @keyframes pop { 0%{transform:scale(0)} 70%{transform:scale(1.1)} 100%{transform:scale(1)} }
+  .success-screen h3 { font-family: var(--font-head); font-size: 1.7rem; font-weight: 700; margin-bottom: 10px; }
+  .success-screen p  { color: var(--grey); font-size: .9rem; margin-bottom: 28px; max-width: 320px; margin-left: auto; margin-right: auto; }
+  .success-info {
+    background: var(--off); border-radius: 12px; padding: 20px;
+    text-align: left; margin-bottom: 28px;
+  }
+  .success-info div { display: flex; justify-content: space-between; font-size: .85rem; padding: 6px 0; border-bottom: 1px solid rgba(10,22,40,.05); }
+  .success-info div:last-child { border: none; }
+  .info-key { color: var(--grey); }
+  .info-val { font-weight: 600; color: var(--navy); }
+  .btn-dashboard {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: var(--navy); color: var(--white);
+    padding: 14px 32px; border-radius: 10px;
+    font-weight: 700; font-size: .9rem;
+    transition: var(--tr); cursor: pointer; border: none;
+    font-family: var(--font-body);
+  }
+  .btn-dashboard:hover { background: var(--teal); color: var(--navy); transform: translateY(-2px); }
+
+  /* ── RESPONSIVE ── */
+  @media (max-width: 860px) {
+    .page { grid-template-columns: 1fr; }
+    .left-panel { display: none; }
+    .right-panel { padding: 40px 28px; }
+  }
+  @media (max-width: 480px) {
+    .field-row { grid-template-columns: 1fr; }
+    .right-panel { padding: 32px 20px; }
+  }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <a href="index.html" class="logo">
+    <div class="logo-icon">🌊</div>
+    TrustWave <span>&nbsp;Finance</span>
+  </a>
+  <a href="index.html" class="nav-back">← Back to Home</a>
+</nav>
+
+<div class="page">
+
+  <!-- LEFT PANEL -->
+  <div class="left-panel">
+    <div class="left-badge">🌊 TrustWave Finance</div>
+    <h1>Banking Made<br><em>Simple & Safe</em></h1>
+    <p>Open your account in minutes and join over 2 million people who trust us with their financial future.</p>
+    <div class="perks">
+      <div class="perk">
+        <div class="perk-icon">🆓</div>
+        <div class="perk-text">
+          <h4>No Monthly Fees</h4>
+          <p>Zero maintenance fees, ever. Your money stays yours.</p>
+        </div>
+      </div>
+      <div class="perk">
+        <div class="perk-icon">🔒</div>
+        <div class="perk-text">
+          <h4>Bank-Level Security</h4>
+          <p>256-bit encryption and biometric authentication.</p>
+        </div>
+      </div>
+      <div class="perk">
+        <div class="perk-icon">🎁</div>
+        <div class="perk-text">
+          <h4>$50 Welcome Bonus</h4>
+          <p>Credited to your account when you make your first deposit.</p>
+        </div>
+      </div>
+      <div class="perk">
+        <div class="perk-icon">💸</div>
+        <div class="perk-text">
+          <h4>Instant Transfers</h4>
+          <p>Send and receive money globally in seconds.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- RIGHT PANEL -->
+  <div class="right-panel">
+    <div id="formContainer">
+
+      <div class="form-header">
+        <h2>Create Your Account</h2>
+        <p>Already have an account? <a href="login.html">Sign in here</a></p>
+      </div>
+
+      <!-- Steps -->
+      <div class="steps">
+        <div class="step-btn active" id="stepBtn1">1. Personal Info</div>
+        <div class="step-btn" id="stepBtn2">2. Security</div>
+        <div class="step-btn" id="stepBtn3">3. Account Type</div>
+      </div>
+
+      <form id="regForm" novalidate>
+
+        <!-- STEP 1: Personal Info -->
+        <div class="form-step active" id="step1">
+          <div class="field-row">
+            <div class="field">
+              <label>First Name <span>*</span></label>
+              <div class="input-wrap">
+                <span class="icon">👤</span>
+                <input type="text" id="firstName" placeholder="John" autocomplete="given-name"/>
+              </div>
+              <div class="field-error" id="firstNameErr">Please enter your first name.</div>
+            </div>
+            <div class="field">
+              <label>Last Name <span>*</span></label>
+              <div class="input-wrap">
+                <span class="icon">👤</span>
+                <input type="text" id="lastName" placeholder="Doe" autocomplete="family-name"/>
+              </div>
+              <div class="field-error" id="lastNameErr">Please enter your last name.</div>
+            </div>
+          </div>
+          <div class="field">
+            <label>Email Address <span>*</span></label>
+            <div class="input-wrap">
+              <span class="icon">✉️</span>
+              <input type="email" id="email" placeholder="john.doe@example.com" autocomplete="email"/>
+            </div>
+            <div class="field-error" id="emailErr">Please enter a valid email address.</div>
+          </div>
+          <div class="field">
+            <label>Phone Number <span>*</span></label>
+            <div class="input-wrap">
+              <span class="icon">📞</span>
+              <input type="tel" id="phone" placeholder="+1 (555) 000-0000" autocomplete="tel"/>
+            </div>
+            <div class="field-error" id="phoneErr">Please enter a valid phone number.</div>
+          </div>
+          <div class="field-row">
+            <div class="field">
+              <label>Date of Birth <span>*</span></label>
+              <div class="input-wrap">
+                <span class="icon">🗓️</span>
+                <input type="date" id="dob" style="padding-left:42px"/>
+              </div>
+              <div class="field-error" id="dobErr">You must be at least 18 years old.</div>
+            </div>
+            <div class="field">
+              <label>Country <span>*</span></label>
+              <div class="input-wrap">
+                <span class="icon">🌍</span>
+                <select id="country" style="padding-left:42px">
+                  <option value="">Select country…</option>
+                  <option>Nigeria</option><option>United States</option><option>United Kingdom</option>
+                  <option>Canada</option><option>Australia</option><option>Ghana</option>
+                  <option>Kenya</option><option>South Africa</option><option>Germany</option>
+                  <option>France</option><option>UAE</option><option>India</option>
+                  <option>Other</option>
+                </select>
+              </div>
+              <div class="field-error" id="countryErr">Please select your country.</div>
+            </div>
+          </div>
+          <button type="button" class="btn-submit" onclick="nextStep(1)">Continue →</button>
+        </div>
+
+        <!-- STEP 2: Security -->
+        <div class="form-step" id="step2">
+          <div class="field">
+            <label>Username <span>*</span></label>
+            <div class="input-wrap">
+              <span class="icon">🏷️</span>
+              <input type="text" id="username" placeholder="johndoe123" autocomplete="username"/>
+            </div>
+            <div class="field-hint">At least 5 characters. Letters and numbers only.</div>
+            <div class="field-error" id="usernameErr">Username must be at least 5 characters.</div>
+          </div>
+          <div class="field">
+            <label>Password <span>*</span></label>
+            <div class="input-wrap">
+              <span class="icon">🔑</span>
+              <input type="password" id="password" placeholder="Create a strong password" oninput="checkStrength()" autocomplete="new-password"/>
+              <span class="pw-toggle" onclick="togglePw('password', this)">👁</span>
+            </div>
+            <div class="pw-strength">
+              <div class="pw-bars">
+                <div class="pw-bar" id="bar1"></div>
+                <div class="pw-bar" id="bar2"></div>
+                <div class="pw-bar" id="bar3"></div>
+                <div class="pw-bar" id="bar4"></div>
+              </div>
+              <div class="pw-label" id="pwLabel">Enter a password</div>
+            </div>
+            <div class="field-error" id="passwordErr">Password must be at least 8 characters with a number.</div>
+          </div>
+          <div class="field">
+            <label>Confirm Password <span>*</span></label>
+            <div class="input-wrap">
+              <span class="icon">🔑</span>
+              <input type="password" id="confirmPw" placeholder="Repeat your password" autocomplete="new-password"/>
+              <span class="pw-toggle" onclick="togglePw('confirmPw', this)">👁</span>
+            </div>
+            <div class="field-error" id="confirmPwErr">Passwords do not match.</div>
+          </div>
+          <div class="field">
+            <label>Security Question <span>*</span></label>
+            <div class="input-wrap">
+              <span class="icon">❓</span>
+              <select id="secQuestion" style="padding-left:42px">
+                <option value="">Choose a question…</option>
+                <option>What was the name of your first pet?</option>
+                <option>What city were you born in?</option>
+                <option>What is your mother's maiden name?</option>
+                <option>What was the name of your primary school?</option>
+                <option>What is your favourite movie?</option>
+              </select>
+            </div>
+            <div class="field-error" id="secQErr">Please select a security question.</div>
+          </div>
+          <div class="field">
+            <label>Security Answer <span>*</span></label>
+            <div class="input-wrap">
+              <span class="icon">💬</span>
+              <input type="text" id="secAnswer" placeholder="Your answer"/>
+            </div>
+            <div class="field-error" id="secAnsErr">Please provide a security answer.</div>
+          </div>
+          <button type="button" class="btn-back" onclick="prevStep(2)">← Back</button>
+          <button type="button" class="btn-submit" onclick="nextStep(2)">Continue →</button>
+        </div>
+
+        <!-- STEP 3: Account Type -->
+        <div class="form-step" id="step3">
+          <div class="field">
+            <label>Account Type <span>*</span></label>
+            <div class="input-wrap">
+              <span class="icon">🏦</span>
+              <select id="accType" style="padding-left:42px">
+                <option value="">Select account type…</option>
+                <option>Personal Checking</option>
+                <option>Personal Savings</option>
+                <option>Business Checking</option>
+                <option>Business Savings</option>
+                <option>Student Account</option>
+              </select>
+            </div>
+            <div class="field-error" id="accTypeErr">Please select an account type.</div>
+          </div>
+          <div class="field">
+            <label>Currency Preference <span>*</span></label>
+            <div class="input-wrap">
+              <span class="icon">💱</span>
+              <select id="currency" style="padding-left:42px">
+                <option value="">Select currency…</option>
+                <option>USD – US Dollar</option>
+                <option>GBP – British Pound</option>
+                <option>EUR – Euro</option>
+                <option>NGN – Nigerian Naira</option>
+                <option>GHS – Ghanaian Cedi</option>
+                <option>KES – Kenyan Shilling</option>
+                <option>ZAR – South African Rand</option>
+                <option>CAD – Canadian Dollar</option>
+                <option>AUD – Australian Dollar</option>
+              </select>
+            </div>
+            <div class="field-error" id="currencyErr">Please select a currency.</div>
+          </div>
+          <div class="field">
+            <label>Referral Code <small style="color:var(--grey);font-weight:400">(optional)</small></label>
+            <div class="input-wrap">
+              <span class="icon">🎟️</span>
+              <input type="text" id="referral" placeholder="e.g. TRUST2025"/>
+            </div>
+            <div class="field-hint">Have a referral code? Enter it to earn bonus rewards.</div>
+          </div>
+          <div class="check-field">
+            <input type="checkbox" id="terms"/>
+            <label for="terms">I agree to the <a href="#">Terms of Service</a> and <a href="#">Privacy Policy</a> of TrustWave Finance.</label>
+          </div>
+          <div class="field-error" id="termsErr" style="margin-top:-14px;margin-bottom:16px">You must accept the terms to continue.</div>
+          <div class="check-field">
+            <input type="checkbox" id="marketing"/>
+            <label for="marketing">I'd like to receive news, offers, and updates from TrustWave Finance (optional).</label>
+          </div>
+          <button type="button" class="btn-back" onclick="prevStep(3)">← Back</button>
+          <button type="button" class="btn-submit" id="submitBtn" onclick="submitForm()">
+            🎉 Create My Account
+          </button>
+        </div>
+
+      </form>
+    </div>
+
+    <!-- SUCCESS SCREEN -->
+    <div class="success-screen" id="successScreen">
+      <div class="success-icon">🎉</div>
+      <h3>Account Created!</h3>
+      <p>Welcome to TrustWave Finance. Your account is ready. Here's a summary:</p>
+      <div class="success-info" id="successInfo"></div>
+      <button class="btn-dashboard" onclick="window.location.href='dashboard.html'">
+        🚀 Go to Dashboard
+      </button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  let currentStep = 1;
+
+  // ── NAVIGATION ──────────────────────────────────
+  function showStep(n) {
+    document.querySelectorAll('.form-step').forEach((s,i) => {
+      s.classList.toggle('active', i+1 === n);
+    });
+    document.querySelectorAll('.step-btn').forEach((b,i) => {
+      b.classList.remove('active','done');
+      if (i+1 === n) b.classList.add('active');
+      if (i+1 < n)  b.classList.add('done');
+    });
+    currentStep = n;
+  }
+
+  function nextStep(from) {
+    if (validateStep(from)) showStep(from + 1);
+  }
+  function prevStep(from) {
+    showStep(from - 1);
+  }
+
+  // ── VALIDATION ───────────────────────────────────
+  function showErr(id, show) {
+    const el = document.getElementById(id);
+    if (el) el.classList.toggle('show', show);
+  }
+  function markInput(id, hasErr) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    el.classList.toggle('error', hasErr);
+    el.classList.toggle('valid', !hasErr && el.value.trim());
+  }
+
+  function validateStep(n) {
+    let ok = true;
+
+    if (n === 1) {
+      const fn = document.getElementById('firstName').value.trim();
+      const ln = document.getElementById('lastName').value.trim();
+      const em = document.getElementById('email').value.trim();
+      const ph = document.getElementById('phone').value.trim();
+      const db = document.getElementById('dob').value;
+      const co = document.getElementById('country').value;
+
+      const emailRe = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+      if (!fn) { showErr('firstNameErr',true); markInput('firstName',true); ok=false; } else { showErr('firstNameErr',false); markInput('firstName',false); }
+      if (!ln) { showErr('lastNameErr',true);  markInput('lastName',true);  ok=false; } else { showErr('lastNameErr',false);  markInput('lastName',false); }
+      if (!emailRe.test(em)) { showErr('emailErr',true); markInput('email',true); ok=false; } else { showErr('emailErr',false); markInput('email',false); }
+      if (ph.length < 7) { showErr('phoneErr',true); markInput('phone',true); ok=false; } else { showErr('phoneErr',false); markInput('phone',false); }
+
+      // age check
+      let ageOk = false;
+      if (db) {
+        const age = (new Date() - new Date(db)) / (1000*60*60*24*365.25);
+        ageOk = age >= 18;
+      }
+      if (!ageOk) { showErr('dobErr',true); markInput('dob',true); ok=false; } else { showErr('dobErr',false); markInput('dob',false); }
+      if (!co) { showErr('countryErr',true); markInput('country',true); ok=false; } else { showErr('countryErr',false); markInput('country',false); }
+    }
+
+    if (n === 2) {
+      const un = document.getElementById('username').value.trim();
+      const pw = document.getElementById('password').value;
+      const cp = document.getElementById('confirmPw').value;
+      const sq = document.getElementById('secQuestion').value;
+      const sa = document.getElementById('secAnswer').value.trim();
+
+      const unRe = /^[a-zA-Z0-9]{5,}$/;
+      const pwRe = /^(?=.*\d).{8,}$/;
+
+      if (!unRe.test(un)) { showErr('usernameErr',true); markInput('username',true); ok=false; } else { showErr('usernameErr',false); markInput('username',false); }
+      if (!pwRe.test(pw)) { showErr('passwordErr',true); markInput('password',true); ok=false; } else { showErr('passwordErr',false); markInput('password',false); }
+      if (pw !== cp || !cp) { showErr('confirmPwErr',true); markInput('confirmPw',true); ok=false; } else { showErr('confirmPwErr',false); markInput('confirmPw',false); }
+      if (!sq) { showErr('secQErr',true); ok=false; } else { showErr('secQErr',false); }
+      if (!sa) { showErr('secAnsErr',true); markInput('secAnswer',true); ok=false; } else { showErr('secAnsErr',false); markInput('secAnswer',false); }
+    }
+
+    if (n === 3) {
+      const at = document.getElementById('accType').value;
+      const cu = document.getElementById('currency').value;
+      const te = document.getElementById('terms').checked;
+
+      if (!at) { showErr('accTypeErr',true); ok=false; } else { showErr('accTypeErr',false); }
+      if (!cu) { showErr('currencyErr',true); ok=false; } else { showErr('currencyErr',false); }
+      if (!te) { showErr('termsErr',true); ok=false; } else { showErr('termsErr',false); }
+    }
+
+    return ok;
+  }
+
+  // ── PASSWORD STRENGTH ─────────────────────────────
+  function checkStrength() {
+    const pw = document.getElementById('password').value;
+    const bars = [document.getElementById('bar1'),document.getElementById('bar2'),document.getElementById('bar3'),document.getElementById('bar4')];
+    const label = document.getElementById('pwLabel');
+
+    bars.forEach(b => b.className = 'pw-bar');
+
+    let score = 0;
+    if (pw.length >= 8) score++;
+    if (/[A-Z]/.test(pw)) score++;
+    if (/\d/.test(pw)) score++;
+    if (/[^A-Za-z0-9]/.test(pw)) score++;
+
+    const cls = score <= 1 ? 'weak' : score <= 2 ? 'fair' : 'strong';
+    const labels = ['','Weak','Fair','Good','Strong'];
+    for (let i = 0; i < score; i++) bars[i].classList.add(cls);
+    label.textContent = pw ? labels[score] || 'Strong' : 'Enter a password';
+    label.style.color = cls === 'weak' ? 'var(--red)' : cls === 'fair' ? 'var(--gold)' : 'var(--teal)';
+  }
+
+  // ── TOGGLE PASSWORD VISIBILITY ────────────────────
+  function togglePw(id, btn) {
+    const inp = document.getElementById(id);
+    const show = inp.type === 'password';
+    inp.type = show ? 'text' : 'password';
+    btn.textContent = show ? '🙈' : '👁';
+  }
+
+  // ── SUBMIT ────────────────────────────────────────
+  function submitForm() {
+    if (!validateStep(3)) return;
+
+    const btn = document.getElementById('submitBtn');
+    btn.disabled = true;
+    btn.textContent = '⏳ Creating account…';
+
+    // Gather data
+    const data = {
+      firstName:  document.getElementById('firstName').value.trim(),
+      lastName:   document.getElementById('lastName').value.trim(),
+      email:      document.getElementById('email').value.trim(),
+      phone:      document.getElementById('phone').value.trim(),
+      dob:        document.getElementById('dob').value,
+      country:    document.getElementById('country').value,
+      username:   document.getElementById('username').value.trim(),
+      accType:    document.getElementById('accType').value,
+      currency:   document.getElementById('currency').value,
+      referral:   document.getElementById('referral').value.trim(),
+      marketing:  document.getElementById('marketing').checked,
+      accountId:  'TW' + Math.random().toString(36).substr(2,8).toUpperCase(),
+      createdAt:  new Date().toLocaleDateString('en-GB', {day:'numeric',month:'long',year:'numeric'})
+    };
+
+    // Save to localStorage
+    const users = JSON.parse(localStorage.getItem('tw_users') || '[]');
+    users.push(data);
+    localStorage.setItem('tw_users', JSON.stringify(users));
+    localStorage.setItem('tw_current_user', JSON.stringify(data));
+
+    // Simulate short processing delay
+    setTimeout(() => {
+      showSuccessScreen(data);
+    }, 1400);
+  }
+
+  function showSuccessScreen(d) {
+    document.getElementById('formContainer').style.display = 'none';
+    const ss = document.getElementById('successScreen');
+    ss.classList.add('show');
+
+    document.getElementById('successInfo').innerHTML = `
+      <div><span class="info-key">Full Name</span><span class="info-val">${d.firstName} ${d.lastName}</span></div>
+      <div><span class="info-key">Email</span><span class="info-val">${d.email}</span></div>
+      <div><span class="info-key">Username</span><span class="info-val">${d.username}</span></div>
+      <div><span class="info-key">Account Type</span><span class="info-val">${d.accType}</span></div>
+      <div><span class="info-key">Account ID</span><span class="info-val">${d.accountId}</span></div>
+      <div><span class="info-key">Currency</span><span class="info-val">${d.currency}</span></div>
+      <div><span class="info-key">Registered</span><span class="info-val">${d.createdAt}</span></div>
+    `;
+  }
+</script>
+</body>
+</html>

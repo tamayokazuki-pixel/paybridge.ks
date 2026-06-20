@@ -1,0 +1,902 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<meta name="description" content="TrustWave Finance – Modern, Secure Banking for Everyone" />
+<title>TrustWave Finance</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700;900&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
+<style>
+  /* ── DESIGN TOKENS ─────────────────────────────── */
+  :root {
+    --navy:   #0a1628;
+    --navy2:  #0f2044;
+    --teal:   #00c9a7;
+    --teal2:  #00a88a;
+    --gold:   #f4c542;
+    --white:  #ffffff;
+    --off:    #f4f7fb;
+    --grey:   #8a96a8;
+    --card:   #ffffff;
+    --shadow: 0 8px 40px rgba(10,22,40,.12);
+    --radius: 16px;
+    --font-head: 'Playfair Display', Georgia, serif;
+    --font-body: 'DM Sans', sans-serif;
+    --transition: .3s cubic-bezier(.4,0,.2,1);
+  }
+
+  /* ── RESET ─────────────────────────────────────── */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: var(--font-body);
+    background: var(--white);
+    color: var(--navy);
+    line-height: 1.65;
+    overflow-x: hidden;
+  }
+  img { max-width: 100%; display: block; }
+  a  { text-decoration: none; color: inherit; }
+  ul { list-style: none; }
+
+  /* ── UTILITY ────────────────────────────────────── */
+  .container { max-width: 1180px; margin: 0 auto; padding: 0 24px; }
+  .badge {
+    display: inline-block;
+    background: rgba(0,201,167,.12);
+    color: var(--teal2);
+    font-size: .72rem;
+    font-weight: 600;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    padding: 5px 14px;
+    border-radius: 100px;
+    margin-bottom: 14px;
+  }
+  .btn {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 14px 30px;
+    border-radius: 50px;
+    font-family: var(--font-body);
+    font-size: .9rem;
+    font-weight: 600;
+    cursor: pointer;
+    border: none;
+    transition: var(--transition);
+    letter-spacing: .02em;
+  }
+  .btn-primary {
+    background: var(--teal);
+    color: var(--navy);
+  }
+  .btn-primary:hover { background: var(--teal2); transform: translateY(-2px); box-shadow: 0 8px 24px rgba(0,201,167,.35); }
+  .btn-outline {
+    background: transparent;
+    color: var(--white);
+    border: 2px solid rgba(255,255,255,.4);
+  }
+  .btn-outline:hover { border-color: var(--teal); color: var(--teal); transform: translateY(-2px); }
+  .btn-dark {
+    background: var(--navy);
+    color: var(--white);
+  }
+  .btn-dark:hover { background: var(--navy2); transform: translateY(-2px); box-shadow: 0 8px 24px rgba(10,22,40,.25); }
+  .section-heading {
+    font-family: var(--font-head);
+    font-size: clamp(2rem, 4vw, 2.8rem);
+    font-weight: 700;
+    line-height: 1.2;
+    margin-bottom: 16px;
+  }
+  .section-sub {
+    font-size: 1.05rem;
+    color: var(--grey);
+    max-width: 520px;
+    margin-bottom: 48px;
+  }
+
+  /* ── NAVBAR ─────────────────────────────────────── */
+  nav {
+    position: fixed; top: 0; width: 100%; z-index: 900;
+    background: rgba(10,22,40,.92);
+    backdrop-filter: blur(14px);
+    border-bottom: 1px solid rgba(255,255,255,.06);
+  }
+  .nav-inner {
+    display: flex; align-items: center; justify-content: space-between;
+    height: 70px;
+  }
+  .logo {
+    display: flex; align-items: center; gap: 10px;
+    font-family: var(--font-head);
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--white);
+  }
+  .logo-icon {
+    width: 36px; height: 36px;
+    background: linear-gradient(135deg, var(--teal), var(--teal2));
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.1rem;
+  }
+  .logo span { color: var(--teal); }
+  .nav-links {
+    display: flex; gap: 32px; align-items: center;
+  }
+  .nav-links a {
+    color: rgba(255,255,255,.72);
+    font-size: .9rem;
+    font-weight: 500;
+    transition: color var(--transition);
+  }
+  .nav-links a:hover { color: var(--teal); }
+  .nav-actions { display: flex; gap: 10px; }
+  .nav-actions a {
+    font-size: .85rem; font-weight: 600;
+    padding: 9px 20px; border-radius: 50px;
+    transition: var(--transition);
+  }
+  .nav-signin { color: rgba(255,255,255,.8); }
+  .nav-signin:hover { color: var(--teal); }
+  .nav-register {
+    background: var(--teal);
+    color: var(--navy);
+    font-weight: 700;
+  }
+  .nav-register:hover { background: var(--teal2); box-shadow: 0 4px 16px rgba(0,201,167,.4); }
+  .hamburger { display: none; flex-direction: column; gap: 5px; cursor: pointer; }
+  .hamburger span { width: 24px; height: 2px; background: var(--white); border-radius: 2px; transition: var(--transition); }
+
+  /* ── HERO ───────────────────────────────────────── */
+  .hero {
+    min-height: 100vh;
+    background: var(--navy);
+    display: flex; align-items: center;
+    position: relative;
+    overflow: hidden;
+    padding-top: 70px;
+  }
+  .hero-bg {
+    position: absolute; inset: 0;
+    background:
+      radial-gradient(ellipse 60% 60% at 70% 50%, rgba(0,201,167,.18) 0%, transparent 70%),
+      radial-gradient(ellipse 40% 40% at 20% 80%, rgba(244,197,66,.08) 0%, transparent 60%);
+  }
+  /* wave decoration */
+  .hero-wave {
+    position: absolute; right: -80px; top: 50%;
+    transform: translateY(-50%);
+    width: 680px; height: 680px;
+    border-radius: 50%;
+    border: 1px solid rgba(0,201,167,.1);
+    pointer-events: none;
+  }
+  .hero-wave::before {
+    content: '';
+    position: absolute; inset: 40px;
+    border-radius: 50%;
+    border: 1px solid rgba(0,201,167,.08);
+  }
+  .hero-wave::after {
+    content: '';
+    position: absolute; inset: 90px;
+    border-radius: 50%;
+    border: 1px solid rgba(0,201,167,.06);
+  }
+  .hero-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 60px;
+    align-items: center;
+    position: relative; z-index: 1;
+    padding: 80px 0;
+  }
+  .hero-eyebrow {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: rgba(0,201,167,.1);
+    border: 1px solid rgba(0,201,167,.2);
+    color: var(--teal);
+    font-size: .78rem; font-weight: 600; letter-spacing: .1em; text-transform: uppercase;
+    padding: 6px 14px; border-radius: 100px;
+    margin-bottom: 22px;
+  }
+  .hero-title {
+    font-family: var(--font-head);
+    font-size: clamp(2.4rem, 5vw, 3.8rem);
+    font-weight: 900;
+    color: var(--white);
+    line-height: 1.1;
+    margin-bottom: 24px;
+  }
+  .hero-title em { color: var(--teal); font-style: normal; }
+  .hero-desc {
+    color: rgba(255,255,255,.65);
+    font-size: 1.05rem;
+    max-width: 460px;
+    margin-bottom: 40px;
+    line-height: 1.75;
+  }
+  .hero-cta { display: flex; gap: 14px; flex-wrap: wrap; margin-bottom: 56px; }
+  .hero-stats {
+    display: grid; grid-template-columns: repeat(4, 1fr);
+    gap: 24px;
+  }
+  .stat-item { }
+  .stat-num {
+    font-family: var(--font-head);
+    font-size: 1.75rem; font-weight: 700;
+    color: var(--white);
+  }
+  .stat-num span { color: var(--teal); }
+  .stat-label { font-size: .78rem; color: var(--grey); font-weight: 500; text-transform: uppercase; letter-spacing: .08em; }
+  .stat-sub { font-size: .75rem; color: rgba(255,255,255,.35); margin-top: 2px; }
+
+  /* hero image panel */
+  .hero-visual {
+    position: relative;
+    display: flex; justify-content: center; align-items: center;
+  }
+  .hero-phone-wrap {
+    position: relative; z-index: 2;
+    animation: float 4s ease-in-out infinite;
+  }
+  @keyframes float {
+    0%,100% { transform: translateY(0); }
+    50%      { transform: translateY(-14px); }
+  }
+  .hero-phone {
+    width: 280px;
+    background: linear-gradient(145deg, #0f2044, #162c56);
+    border-radius: 36px;
+    padding: 24px 20px;
+    box-shadow: 0 40px 80px rgba(0,0,0,.5), 0 0 0 1px rgba(255,255,255,.06);
+    position: relative; overflow: hidden;
+  }
+  .hero-phone::before {
+    content: '';
+    position: absolute; top: -40px; right: -40px;
+    width: 150px; height: 150px;
+    background: radial-gradient(circle, rgba(0,201,167,.25), transparent 70%);
+    border-radius: 50%;
+  }
+  .phone-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 22px; }
+  .phone-logo { font-family: var(--font-head); font-size: .85rem; color: var(--teal); font-weight: 700; }
+  .phone-avatar { width: 28px; height: 28px; background: linear-gradient(135deg,var(--teal),var(--gold)); border-radius: 50%; }
+  .phone-balance-label { font-size: .68rem; color: rgba(255,255,255,.45); text-transform: uppercase; letter-spacing: .1em; }
+  .phone-balance { font-family: var(--font-head); font-size: 2rem; color: var(--white); font-weight: 700; margin: 4px 0 16px; }
+  .phone-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
+  .phone-btn {
+    background: rgba(255,255,255,.06);
+    border: 1px solid rgba(255,255,255,.08);
+    border-radius: 12px;
+    padding: 10px;
+    text-align: center;
+    font-size: .7rem; color: rgba(255,255,255,.7); font-weight: 500;
+    cursor: pointer; transition: var(--transition);
+  }
+  .phone-btn:hover { background: rgba(0,201,167,.15); border-color: var(--teal); }
+  .phone-btn .icon { font-size: 1.1rem; margin-bottom: 3px; }
+  .phone-txn-label { font-size: .68rem; color: rgba(255,255,255,.4); text-transform: uppercase; letter-spacing: .1em; margin-bottom: 10px; }
+  .phone-txn { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid rgba(255,255,255,.05); }
+  .txn-name { font-size: .78rem; color: rgba(255,255,255,.75); }
+  .txn-date { font-size: .65rem; color: rgba(255,255,255,.3); }
+  .txn-amt { font-size: .82rem; font-weight: 600; }
+  .txn-amt.cr { color: var(--teal); }
+  .txn-amt.dr { color: #ff6b6b; }
+
+  /* floating cards */
+  .float-card {
+    position: absolute;
+    background: rgba(255,255,255,.08);
+    backdrop-filter: blur(12px);
+    border: 1px solid rgba(255,255,255,.12);
+    border-radius: 14px;
+    padding: 12px 16px;
+    color: var(--white);
+    font-size: .78rem;
+    white-space: nowrap;
+  }
+  .float-card-1 { top: 8%; left: -40px; animation: float 5s ease-in-out infinite; animation-delay: .5s; }
+  .float-card-2 { bottom: 12%; right: -20px; animation: float 4.5s ease-in-out infinite; animation-delay: 1s; }
+  .fc-label { color: rgba(255,255,255,.5); font-size: .65rem; margin-bottom: 3px; }
+  .fc-val { font-weight: 700; font-size: .95rem; }
+  .fc-val.green { color: var(--teal); }
+  .fc-val.gold  { color: var(--gold); }
+
+  /* ── TRUST BAR ──────────────────────────────────── */
+  .trust-bar {
+    background: var(--off);
+    padding: 28px 0;
+    border-bottom: 1px solid rgba(10,22,40,.06);
+  }
+  .trust-inner {
+    display: flex; gap: 48px; flex-wrap: wrap; justify-content: center; align-items: center;
+  }
+  .trust-item {
+    display: flex; align-items: center; gap: 10px;
+    color: var(--grey); font-size: .85rem; font-weight: 500;
+  }
+  .trust-icon { font-size: 1.2rem; }
+
+  /* ── WHY CHOOSE ─────────────────────────────────── */
+  .why { padding: 96px 0; background: var(--white); }
+  .why-grid {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 72px; align-items: center;
+  }
+  .why-cards { display: flex; flex-direction: column; gap: 20px; }
+  .why-card {
+    display: flex; gap: 20px; align-items: flex-start;
+    background: var(--off);
+    border: 1px solid rgba(10,22,40,.06);
+    border-radius: var(--radius);
+    padding: 24px;
+    transition: var(--transition);
+    cursor: default;
+  }
+  .why-card:hover { box-shadow: var(--shadow); transform: translateX(6px); border-color: var(--teal); }
+  .why-icon {
+    flex-shrink: 0;
+    width: 48px; height: 48px;
+    background: linear-gradient(135deg, rgba(0,201,167,.15), rgba(0,201,167,.05));
+    border-radius: 14px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.4rem;
+  }
+  .why-card h3 { font-size: 1rem; font-weight: 600; margin-bottom: 6px; }
+  .why-card p  { font-size: .88rem; color: var(--grey); line-height: 1.65; }
+  .why-visual {
+    background: linear-gradient(145deg, var(--navy), var(--navy2));
+    border-radius: 28px;
+    padding: 40px 36px;
+    color: var(--white);
+    position: relative; overflow: hidden;
+    box-shadow: 0 32px 64px rgba(10,22,40,.2);
+  }
+  .why-visual::before {
+    content: '';
+    position: absolute; bottom: -60px; right: -60px;
+    width: 240px; height: 240px;
+    background: radial-gradient(circle, rgba(0,201,167,.18), transparent 70%);
+    border-radius: 50%;
+  }
+  .why-visual h2 { font-family: var(--font-head); font-size: 1.6rem; font-weight: 700; margin-bottom: 8px; }
+  .why-visual p  { color: rgba(255,255,255,.55); font-size: .9rem; margin-bottom: 32px; }
+  .why-metric { margin-bottom: 24px; }
+  .metric-label { font-size: .75rem; color: rgba(255,255,255,.45); text-transform: uppercase; letter-spacing: .1em; margin-bottom: 8px; }
+  .metric-bar { height: 6px; background: rgba(255,255,255,.08); border-radius: 3px; overflow: hidden; }
+  .metric-fill { height: 100%; border-radius: 3px; background: linear-gradient(90deg, var(--teal), var(--teal2)); }
+  .metric-pct { font-size: .82rem; color: var(--teal); font-weight: 600; margin-top: 5px; }
+
+  /* ── SERVICES ───────────────────────────────────── */
+  .services { padding: 96px 0; background: var(--navy); }
+  .services .section-heading { color: var(--white); }
+  .services .section-sub { color: rgba(255,255,255,.45); }
+  .services-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 24px;
+  }
+  .service-card {
+    background: rgba(255,255,255,.04);
+    border: 1px solid rgba(255,255,255,.08);
+    border-radius: var(--radius);
+    padding: 32px 28px;
+    transition: var(--transition);
+    position: relative; overflow: hidden;
+  }
+  .service-card::before {
+    content: '';
+    position: absolute; bottom: -40px; right: -40px;
+    width: 120px; height: 120px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(0,201,167,.12), transparent 70%);
+    transition: var(--transition);
+  }
+  .service-card:hover { border-color: var(--teal); transform: translateY(-6px); }
+  .service-card:hover::before { transform: scale(1.5); }
+  .srv-icon {
+    font-size: 2rem; margin-bottom: 20px;
+    width: 56px; height: 56px;
+    background: rgba(0,201,167,.1);
+    border-radius: 16px;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .service-card h3 { font-size: 1.1rem; font-weight: 600; color: var(--white); margin-bottom: 12px; }
+  .service-card ul { }
+  .service-card li {
+    display: flex; align-items: center; gap: 8px;
+    font-size: .85rem; color: rgba(255,255,255,.5);
+    padding: 5px 0; border-bottom: 1px solid rgba(255,255,255,.04);
+  }
+  .service-card li::before { content: '→'; color: var(--teal); font-size: .75rem; }
+
+  /* ── TESTIMONIALS ───────────────────────────────── */
+  .testimonials { padding: 96px 0; background: var(--off); }
+  .testi-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(280px,1fr));
+    gap: 24px;
+  }
+  .testi-card {
+    background: var(--white);
+    border-radius: var(--radius);
+    padding: 32px 28px;
+    box-shadow: 0 4px 24px rgba(10,22,40,.06);
+    transition: var(--transition);
+    border: 1px solid transparent;
+  }
+  .testi-card:hover { border-color: var(--teal); box-shadow: var(--shadow); }
+  .stars { color: var(--gold); font-size: .9rem; margin-bottom: 16px; letter-spacing: .05em; }
+  .testi-text { font-size: .92rem; color: #3a4555; line-height: 1.75; margin-bottom: 24px; font-style: italic; }
+  .testi-author { display: flex; align-items: center; gap: 12px; }
+  .testi-avatar {
+    width: 44px; height: 44px; border-radius: 50%;
+    background: linear-gradient(135deg, var(--teal), var(--navy));
+    display: flex; align-items: center; justify-content: center;
+    color: var(--white); font-weight: 700; font-size: .9rem;
+    flex-shrink: 0;
+  }
+  .testi-name { font-weight: 600; font-size: .9rem; }
+  .testi-role { font-size: .78rem; color: var(--grey); }
+
+  /* ── CTA BANNER ─────────────────────────────────── */
+  .cta-section {
+    background: linear-gradient(135deg, var(--navy), var(--navy2));
+    padding: 96px 0;
+    text-align: center;
+    position: relative; overflow: hidden;
+  }
+  .cta-section::before {
+    content: '';
+    position: absolute; top: -80px; left: 50%;
+    transform: translateX(-50%);
+    width: 500px; height: 500px;
+    background: radial-gradient(circle, rgba(0,201,167,.15), transparent 65%);
+    border-radius: 50%;
+  }
+  .cta-section h2 { font-family: var(--font-head); font-size: clamp(1.8rem,4vw,2.8rem); color: var(--white); font-weight: 800; margin-bottom: 16px; position: relative; }
+  .cta-section p  { color: rgba(255,255,255,.55); font-size: 1rem; max-width: 520px; margin: 0 auto 40px; position: relative; }
+  .cta-buttons { display: flex; gap: 14px; justify-content: center; flex-wrap: wrap; position: relative; }
+  .cta-chips {
+    display: flex; gap: 24px; justify-content: center; flex-wrap: wrap;
+    margin-top: 48px; position: relative;
+  }
+  .cta-chip {
+    display: flex; align-items: center; gap: 8px;
+    color: rgba(255,255,255,.55); font-size: .82rem;
+  }
+  .cta-chip span.ic { color: var(--teal); font-size: 1rem; }
+
+  /* ── FOOTER ─────────────────────────────────────── */
+  footer {
+    background: #060e1c;
+    padding: 64px 0 32px;
+    color: rgba(255,255,255,.45);
+  }
+  .footer-grid {
+    display: grid; grid-template-columns: 2fr 1fr 1fr 1fr;
+    gap: 48px; margin-bottom: 48px;
+  }
+  .footer-brand .logo { margin-bottom: 16px; }
+  .footer-brand p { font-size: .85rem; line-height: 1.75; max-width: 260px; }
+  .footer-contact { margin-top: 20px; font-size: .82rem; }
+  .footer-contact div { margin-bottom: 6px; }
+  .footer-col h4 { color: var(--white); font-size: .85rem; font-weight: 600; text-transform: uppercase; letter-spacing: .1em; margin-bottom: 16px; }
+  .footer-col a { display: block; font-size: .85rem; color: rgba(255,255,255,.4); margin-bottom: 9px; transition: color var(--transition); }
+  .footer-col a:hover { color: var(--teal); }
+  .footer-bottom {
+    border-top: 1px solid rgba(255,255,255,.06);
+    padding-top: 28px;
+    display: flex; justify-content: space-between; align-items: center;
+    flex-wrap: wrap; gap: 12px;
+    font-size: .78rem;
+  }
+  .social-links { display: flex; gap: 12px; }
+  .social-links a {
+    width: 34px; height: 34px;
+    background: rgba(255,255,255,.06);
+    border-radius: 8px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: .85rem;
+    transition: var(--transition);
+    color: rgba(255,255,255,.5);
+  }
+  .social-links a:hover { background: var(--teal); color: var(--navy); }
+
+  /* ── MOBILE ─────────────────────────────────────── */
+  @media (max-width: 900px) {
+    .nav-links { display: none; }
+    .hamburger { display: flex; }
+    .hero-grid { grid-template-columns: 1fr; text-align: center; }
+    .hero-stats { grid-template-columns: repeat(2,1fr); }
+    .hero-visual { display: none; }
+    .hero-cta { justify-content: center; }
+    .why-grid { grid-template-columns: 1fr; }
+    .footer-grid { grid-template-columns: 1fr 1fr; }
+  }
+  @media (max-width: 580px) {
+    .footer-grid { grid-template-columns: 1fr; }
+    .footer-bottom { flex-direction: column; text-align: center; }
+    .hero-stats { grid-template-columns: repeat(2,1fr); }
+    .trust-inner { gap: 24px; }
+  }
+
+  /* ── ANIMATIONS ─────────────────────────────────── */
+  .fade-up {
+    opacity: 0; transform: translateY(30px);
+    transition: opacity .6s ease, transform .6s ease;
+  }
+  .fade-up.visible { opacity: 1; transform: translateY(0); }
+</style>
+</head>
+<body>
+
+<!-- ── NAVBAR ── -->
+<nav>
+  <div class="container nav-inner">
+    <a href="#" class="logo">
+      <div class="logo-icon">🌊</div>
+      TrustWave <span>&nbsp;Finance</span>
+    </a>
+    <div class="nav-links">
+      <a href="#">Home</a>
+      <a href="#why">About</a>
+      <a href="#services">Services</a>
+      <a href="#testimonials">Reviews</a>
+      <a href="#contact">Contact</a>
+    </div>
+    <div class="nav-actions">
+      <a href="login.html" class="nav-signin">Sign In</a>
+      <a href="register.html" class="nav-register">Open Account</a>
+    </div>
+    <div class="hamburger" onclick="this.classList.toggle('open')">
+      <span></span><span></span><span></span>
+    </div>
+  </div>
+</nav>
+
+<!-- ── HERO ── -->
+<section class="hero">
+  <div class="hero-bg"></div>
+  <div class="hero-wave"></div>
+  <div class="container">
+    <div class="hero-grid">
+      <div class="hero-content">
+        <div class="hero-eyebrow">🔒 Bank-Level Security &amp; Trust</div>
+        <h1 class="hero-title">
+          Your Financial<br>Future <em>Starts Here</em>
+        </h1>
+        <p class="hero-desc">
+          TrustWave Finance delivers smart, secure banking for individuals and businesses worldwide. Experience the future of finance — fast, transparent, and always on your side.
+        </p>
+        <div class="hero-cta">
+          <a href="register.html" class="btn btn-primary">Open Free Account →</a>
+          <a href="#why" class="btn btn-outline">Learn More</a>
+        </div>
+        <div class="hero-stats">
+          <div class="stat-item">
+            <div class="stat-num">2012<span>+</span></div>
+            <div class="stat-label">Founded</div>
+            <div class="stat-sub">Years of service</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-num">2M<span>+</span></div>
+            <div class="stat-label">Customers</div>
+            <div class="stat-sub">Worldwide clients</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-num">60<span>+</span></div>
+            <div class="stat-label">Countries</div>
+            <div class="stat-sub">Global presence</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-num">99.9<span>%</span></div>
+            <div class="stat-label">Uptime</div>
+            <div class="stat-sub">Reliability</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Phone mockup -->
+      <div class="hero-visual">
+        <div class="float-card float-card-1">
+          <div class="fc-label">Monthly Growth</div>
+          <div class="fc-val green">↑ +12.4%</div>
+        </div>
+        <div class="float-card float-card-2">
+          <div class="fc-label">Rewards Earned</div>
+          <div class="fc-val gold">$284 Cash</div>
+        </div>
+        <div class="hero-phone-wrap">
+          <div class="hero-phone">
+            <div class="phone-bar">
+              <span class="phone-logo">TrustWave</span>
+              <div class="phone-avatar"></div>
+            </div>
+            <div class="phone-balance-label">Total Balance</div>
+            <div class="phone-balance">$24,850.00</div>
+            <div class="phone-actions">
+              <div class="phone-btn"><div class="icon">💸</div>Send</div>
+              <div class="phone-btn"><div class="icon">📥</div>Receive</div>
+              <div class="phone-btn"><div class="icon">💳</div>Pay</div>
+              <div class="phone-btn"><div class="icon">📊</div>Stats</div>
+            </div>
+            <div class="phone-txn-label">Recent Activity</div>
+            <div class="phone-txn">
+              <div><div class="txn-name">Direct Deposit</div><div class="txn-date">Today</div></div>
+              <div class="txn-amt cr">+$3,200</div>
+            </div>
+            <div class="phone-txn">
+              <div><div class="txn-name">Online Transfer</div><div class="txn-date">Yesterday</div></div>
+              <div class="txn-amt dr">−$480</div>
+            </div>
+            <div class="phone-txn">
+              <div><div class="txn-name">Cash Reward</div><div class="txn-date">May 27</div></div>
+              <div class="txn-amt cr">+$42</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── TRUST BAR ── -->
+<div class="trust-bar">
+  <div class="container">
+    <div class="trust-inner">
+      <div class="trust-item"><span class="trust-icon">🔐</span>256-bit Encryption</div>
+      <div class="trust-item"><span class="trust-icon">🏦</span>FDIC Insured</div>
+      <div class="trust-item"><span class="trust-icon">📱</span>Mobile Banking</div>
+      <div class="trust-item"><span class="trust-icon">🌍</span>Global Transfers</div>
+      <div class="trust-item"><span class="trust-icon">🎁</span>Cash Rewards</div>
+      <div class="trust-item"><span class="trust-icon">💬</span>24/7 Support</div>
+    </div>
+  </div>
+</div>
+
+<!-- ── WHY CHOOSE ── -->
+<section class="why" id="why">
+  <div class="container">
+    <div class="why-grid">
+      <div class="why-content fade-up">
+        <div class="badge">Why TrustWave</div>
+        <h2 class="section-heading">Banking Built Around You</h2>
+        <p class="section-sub">Since 2012, we've connected millions of people to financial opportunity with transparency, security, and genuine care.</p>
+        <div class="why-cards">
+          <div class="why-card">
+            <div class="why-icon">📱</div>
+            <div>
+              <h3>Mobile-First Banking</h3>
+              <p>Manage accounts, deposit checks, transfer funds, and pay bills — all from your smartphone with a beautiful, intuitive app.</p>
+            </div>
+          </div>
+          <div class="why-card">
+            <div class="why-icon">🔒</div>
+            <div>
+              <h3>Advanced Security</h3>
+              <p>Your finances are guarded by 256-bit encryption, biometric authentication, and real-time fraud detection working around the clock.</p>
+            </div>
+          </div>
+          <div class="why-card">
+            <div class="why-icon">🎁</div>
+            <div>
+              <h3>Earn Cash Rewards</h3>
+              <p>Get rewarded for every eligible purchase. Earn cashback, referral bonuses, and exclusive member perks automatically.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="why-visual fade-up">
+        <h2>Performance You Can Count On</h2>
+        <p>Our platform consistently delivers best-in-class reliability and speed.</p>
+        <div class="why-metric">
+          <div class="metric-label">Customer Satisfaction</div>
+          <div class="metric-bar"><div class="metric-fill" style="width:96%"></div></div>
+          <div class="metric-pct">96%</div>
+        </div>
+        <div class="why-metric">
+          <div class="metric-label">System Uptime</div>
+          <div class="metric-bar"><div class="metric-fill" style="width:99.9%"></div></div>
+          <div class="metric-pct">99.9%</div>
+        </div>
+        <div class="why-metric">
+          <div class="metric-label">Transaction Success Rate</div>
+          <div class="metric-bar"><div class="metric-fill" style="width:99.7%"></div></div>
+          <div class="metric-pct">99.7%</div>
+        </div>
+        <div class="why-metric">
+          <div class="metric-label">Fraud Prevention</div>
+          <div class="metric-bar"><div class="metric-fill" style="width:98%"></div></div>
+          <div class="metric-pct">98%</div>
+        </div>
+        <a href="#" class="btn btn-primary" style="margin-top:8px;">Open Account Free →</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── SERVICES ── -->
+<section class="services" id="services">
+  <div class="container">
+    <div class="badge" style="background:rgba(0,201,167,.15);color:var(--teal);">Our Services</div>
+    <h2 class="section-heading fade-up">Complete Banking Solutions</h2>
+    <p class="section-sub fade-up">Comprehensive financial products designed to meet your unique needs at every stage of life.</p>
+    <div class="services-grid fade-up">
+      <div class="service-card">
+        <div class="srv-icon">👤</div>
+        <h3>Personal Banking</h3>
+        <ul>
+          <li>Checking Accounts</li>
+          <li>Savings Accounts</li>
+          <li>Personal Loans</li>
+          <li>Home Mortgages</li>
+          <li>Credit Cards</li>
+        </ul>
+      </div>
+      <div class="service-card">
+        <div class="srv-icon">🏢</div>
+        <h3>Business Banking</h3>
+        <ul>
+          <li>Business Accounts</li>
+          <li>Commercial Loans</li>
+          <li>Merchant Services</li>
+          <li>Payroll Solutions</li>
+          <li>Business Credit</li>
+        </ul>
+      </div>
+      <div class="service-card">
+        <div class="srv-icon">📈</div>
+        <h3>Investments</h3>
+        <ul>
+          <li>Portfolio Management</li>
+          <li>Retirement Planning</li>
+          <li>Mutual Funds</li>
+          <li>ETF Trading</li>
+          <li>Wealth Advisory</li>
+        </ul>
+      </div>
+      <div class="service-card">
+        <div class="srv-icon">🌐</div>
+        <h3>International</h3>
+        <ul>
+          <li>Global Wire Transfers</li>
+          <li>Multi-Currency Accounts</li>
+          <li>FX Services</li>
+          <li>Trade Finance</li>
+          <li>Overseas Accounts</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── TESTIMONIALS ── -->
+<section class="testimonials" id="testimonials">
+  <div class="container">
+    <div style="text-align:center;margin-bottom:56px;" class="fade-up">
+      <div class="badge">Customer Stories</div>
+      <h2 class="section-heading">Trusted by Millions Worldwide</h2>
+      <p class="section-sub" style="margin:0 auto;">Real experiences from people whose financial lives have been transformed.</p>
+    </div>
+    <div class="testi-grid fade-up">
+      <div class="testi-card">
+        <div class="stars">★★★★★</div>
+        <p class="testi-text">"TrustWave Finance transformed how I manage my business finances. The dashboard is intuitive and their business loan process was incredibly smooth."</p>
+        <div class="testi-author">
+          <div class="testi-avatar">AO</div>
+          <div><div class="testi-name">Adaeze Okonkwo</div><div class="testi-role">Business Owner, Lagos</div></div>
+        </div>
+      </div>
+      <div class="testi-card">
+        <div class="stars">★★★★★</div>
+        <p class="testi-text">"The mobile app is outstanding. I can send international transfers in seconds with the best exchange rates I've found. Customer support is always responsive."</p>
+        <div class="testi-author">
+          <div class="testi-avatar">KM</div>
+          <div><div class="testi-name">Kwame Mensah</div><div class="testi-role">Software Engineer, Accra</div></div>
+        </div>
+      </div>
+      <div class="testi-card">
+        <div class="stars">★★★★★</div>
+        <p class="testi-text">"I've been banking with TrustWave for 4 years and the cashback rewards alone have paid for two flights. Genuinely the best bank I've ever used."</p>
+        <div class="testi-author">
+          <div class="testi-avatar">FA</div>
+          <div><div class="testi-name">Fatima Al-Rashid</div><div class="testi-role">Marketing Director, Dubai</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── CTA ── -->
+<section class="cta-section" id="contact">
+  <div class="container">
+    <h2>Ready to Start Your<br>Banking Journey?</h2>
+    <p>Join over 2 million customers who rely on TrustWave Finance. Open your account in minutes — no paperwork, no hassle.</p>
+    <div class="cta-buttons">
+      <a href="register.html" class="btn btn-primary">Create Free Account →</a>
+      <a href="#" class="btn btn-outline">Contact Support</a>
+    </div>
+    <div class="cta-chips">
+      <div class="cta-chip"><span class="ic">🔒</span> Bank-Level Encryption</div>
+      <div class="cta-chip"><span class="ic">📱</span> Mobile First Design</div>
+      <div class="cta-chip"><span class="ic">💬</span> 24/7 Live Support</div>
+      <div class="cta-chip"><span class="ic">🆓</span> No Monthly Fees</div>
+    </div>
+  </div>
+</section>
+
+<!-- ── FOOTER ── -->
+<footer>
+  <div class="container">
+    <div class="footer-grid">
+      <div class="footer-brand">
+        <a href="#" class="logo">
+          <div class="logo-icon">🌊</div>
+          TrustWave <span style="color:var(--teal)">&nbsp;Finance</span>
+        </a>
+        <p>A leading international banking institution serving millions of customers worldwide since 2012.</p>
+        <div class="footer-contact">
+          <div>📞 +1 (800) 878-2950</div>
+          <div>✉️ support@trustwavefinance.com</div>
+          <div>🕐 Mon–Fri: 9 AM – 6 PM</div>
+          <div>&nbsp;&nbsp;&nbsp;&nbsp; Sat–Sun: 10 AM – 4 PM</div>
+        </div>
+      </div>
+      <div class="footer-col">
+        <h4>Personal</h4>
+        <a href="#">Checking</a>
+        <a href="#">Savings</a>
+        <a href="#">Loans</a>
+        <a href="#">Mortgages</a>
+      </div>
+      <div class="footer-col">
+        <h4>Company</h4>
+        <a href="#">About Us</a>
+        <a href="#">Careers</a>
+        <a href="#">Press</a>
+        <a href="#">Contact</a>
+      </div>
+      <div class="footer-col">
+        <h4>Support</h4>
+        <a href="#">Help Center</a>
+        <a href="#">Privacy Policy</a>
+        <a href="#">Terms of Service</a>
+        <a href="#">Security</a>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span>© 2025 TrustWave Finance. All rights reserved.</span>
+      <div class="social-links">
+        <a href="#">f</a>
+        <a href="#">𝕏</a>
+        <a href="#">in</a>
+        <a href="#">📷</a>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<script>
+  // Scroll animations
+  const observer = new IntersectionObserver((entries) => {
+    entries.forEach(e => { if (e.isIntersecting) { e.target.classList.add('visible'); } });
+  }, { threshold: 0.12 });
+  document.querySelectorAll('.fade-up').forEach(el => observer.observe(el));
+
+  // Metric bar animation
+  const barObserver = new IntersectionObserver((entries) => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
+        e.target.querySelectorAll('.metric-fill').forEach(bar => {
+          const w = bar.style.width;
+          bar.style.width = '0';
+          setTimeout(() => { bar.style.transition = 'width 1.2s cubic-bezier(.4,0,.2,1)'; bar.style.width = w; }, 100);
+        });
+      }
+    });
+  }, { threshold: 0.3 });
+  document.querySelectorAll('.why-visual').forEach(el => barObserver.observe(el));
+</script>
+</body>
+</html>
