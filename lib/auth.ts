@@ -44,9 +44,32 @@ export async function ensureProfile() {
     .eq("id", user.id)
     .maybeSingle();
 
-  if (existing) return existing;
+  if (existing) {
+    // Check if the legacy 'profiles' table needs syncing to prevent foreign key errors on transactions
+    const { data: existingProfile } = await admin.from("profiles").select("id").eq("id", user.id).maybeSingle();
+    if (!existingProfile) {
+      await admin.from("profiles").insert({
+        id: user.id,
+        email: user.email,
+        first_name: firstName,
+        last_name: lastName,
+        account_id: existing.account_id
+      });
+    }
+    return existing;
+  }
 
   const accountId = `PB${Math.random().toString(36).slice(2, 10).toUpperCase()}`;
+  
+  // Insert into both tables to keep them synced
+  await admin.from("profiles").insert({
+    id: user.id,
+    email: user.email,
+    first_name: firstName,
+    last_name: lastName,
+    account_id: accountId
+  });
+
   const { data, error } = await admin
     .from("users")
     .insert({

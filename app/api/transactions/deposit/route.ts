@@ -27,6 +27,7 @@ export async function POST(request: Request) {
     .from("transactions")
     .insert({
       user_id: user.id,
+      profile_id: user.id,
       type: "deposit",
       status: "pending",
       amount: body.amount,
@@ -37,6 +38,9 @@ export async function POST(request: Request) {
     .select("*")
     .single();
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+  if (error) {
+    console.error("Supabase insert error:", error);
+    return NextResponse.json({ error: error.message }, { status: 400 });
+  }
   return NextResponse.json({ transaction: data, paymentMethod: method });
 }
