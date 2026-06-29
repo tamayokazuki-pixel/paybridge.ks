@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, Landmark, ShieldCheck, WalletCards, type LucideIcon } from "lucide-react";
+import { ArrowRight, Landmark, ShieldCheck, WalletCards, HelpCircle, type LucideIcon } from "lucide-react";
 
 export default function HomePage() {
   return (
@@ -59,6 +59,44 @@ export default function HomePage() {
                 <p className="font-bold">{String(label)}</p>
               </div>
             ))}
+          </div>
+        </div>
+      </section>
+
+      {/* FAQ Section */}
+      <section className="mx-auto max-w-4xl px-6 pb-24 pt-10">
+        <div className="mb-12 text-center">
+          <div className="mx-auto mb-4 inline-flex items-center justify-center rounded-full bg-teal/10 p-3 text-teal">
+            <HelpCircle size={28} />
+          </div>
+          <h2 className="font-head text-3xl font-black md:text-4xl">Frequently Asked Questions</h2>
+          <p className="mt-4 text-white/64">Everything you need to know about paybridge.ks.</p>
+        </div>
+        
+        <div className="grid gap-6 md:grid-cols-2">
+          <div className="rounded-2xl border border-white/10 bg-white/5 p-6">
+            <h3 className="font-head text-xl font-bold">What is paybridge.ks?</h3>
+            <p className="mt-3 text-sm leading-relaxed text-white/64">
+              paybridge.ks is a modern digital banking demonstration platform that combines real-time transaction tracking with secure, admin-approved deposit funding requests.
+            </p>
+          </div>
+          <div className="rounded-2xl border border-white/10 bg-white/5 p-6">
+            <h3 className="font-head text-xl font-bold">How long do deposits take?</h3>
+            <p className="mt-3 text-sm leading-relaxed text-white/64">
+              Once you submit a deposit request and complete the payment using the provided instructions, our admin team verifies and approves the transaction. Typically, this takes less than 2 hours during business operations.
+            </p>
+          </div>
+          <div className="rounded-2xl border border-white/10 bg-white/5 p-6">
+            <h3 className="font-head text-xl font-bold">Is there a minimum deposit?</h3>
+            <p className="mt-3 text-sm leading-relaxed text-white/64">
+              Yes, the minimum deposit amount is $50. This ensures we can effectively process transactions while keeping administrative overhead low.
+            </p>
+          </div>
+          <div className="rounded-2xl border border-white/10 bg-white/5 p-6">
+            <h3 className="font-head text-xl font-bold">Is my data secure?</h3>
+            <p className="mt-3 text-sm leading-relaxed text-white/64">
+              Absolutely. We use Supabase for our backend infrastructure, meaning all data is encrypted at rest and protected by robust Row Level Security (RLS) policies.
+            </p>
           </div>
         </div>
       </section>

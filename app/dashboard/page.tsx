@@ -25,7 +25,7 @@ export default async function DashboardPage() {
     .from("transactions")
     .select("amount,type,status")
     .eq("user_id", profile.id)
-    .eq("status", "approved");
+    .eq("status", "completed");
 
   const ledgerBalance = (ledgerBalanceData || []).reduce((sum, txn) => {
     if (txn.type === "deposit" || txn.type === "admin_adjustment") {

@@ -25,7 +25,7 @@ export async function POST(request: Request) {
   const { data, error } = await supabase
     .from("transactions")
     .update({
-      status: "approved",
+      status: "completed",
       reference: reference || null,
       completed_at: new Date().toISOString()
     })

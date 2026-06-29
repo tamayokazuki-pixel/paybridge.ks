@@ -4,7 +4,7 @@ import { getCurrentUser } from "@/lib/auth";
 import { createSupabaseAdminClient } from "@/lib/supabase-server";
 
 const depositSchema = z.object({
-  amount: z.number().min(10),
+  amount: z.number().min(50, "Minimum deposit amount is $50"),
   paymentMethodKey: z.string().min(1)
 });
 

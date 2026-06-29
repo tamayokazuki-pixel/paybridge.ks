@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { CheckCircle, CreditCard, LogOut, Settings, Shield, Users, XCircle, type LucideIcon } from "lucide-react";
+import { CheckCircle, CreditCard, LogOut, Settings, Shield, Users, XCircle, Loader2, type LucideIcon } from "lucide-react";
 import { money, initials } from "@/lib/format";
 
 type Profile = {
@@ -19,7 +19,7 @@ type Transaction = {
   id: string;
   user_id: string;
   amount: number;
-  status: "pending" | "approved" | "rejected";
+  status: "pending" | "completed" | "rejected";
   type: string;
   description: string;
   method_label?: string;
@@ -51,7 +51,7 @@ export function AdminClient({
   const credited = transactions
     .filter(
       (txn) =>
-        txn.status === "approved" &&
+        txn.status === "completed" &&
         (txn.type === "deposit" || txn.type === "admin_adjustment")
     )
     .reduce((sum, txn) => sum + Number(txn.amount), 0);
@@ -220,9 +220,23 @@ function DepositTable({
   onReject
 }: {
   transactions: Transaction[];
-  onApprove: (id: string) => void;
-  onReject: (id: string) => void;
+  onApprove: (id: string) => Promise<unknown>;
+  onReject: (id: string) => Promise<unknown>;
 }) {
+  const [loadingId, setLoadingId] = useState<string | null>(null);
+
+  const handleApprove = async (id: string) => {
+    setLoadingId(id);
+    await onApprove(id);
+    setLoadingId(null);
+  };
+
+  const handleReject = async (id: string) => {
+    setLoadingId(id);
+    await onReject(id);
+    setLoadingId(null);
+  };
+
   return (
     <section className="card overflow-hidden">
       <div className="border-b border-slate-100 p-5">
@@ -247,11 +261,21 @@ function DepositTable({
                 <td>
                   {txn.status === "pending" ? (
                     <div className="flex flex-wrap gap-2">
-                      <button className="btn-secondary px-3 py-2 text-xs text-teal2" onClick={() => onApprove(txn.id)} type="button">
-                        <CheckCircle size={14} /> Approve
+                      <button 
+                        className="btn-secondary px-3 py-2 text-xs text-teal2 disabled:opacity-50" 
+                        onClick={() => handleApprove(txn.id)} 
+                        disabled={loadingId === txn.id}
+                        type="button"
+                      >
+                        {loadingId === txn.id ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle size={14} />} Approve
                       </button>
-                      <button className="btn-danger flex items-center gap-1 px-3 py-2 text-xs" onClick={() => onReject(txn.id)} type="button">
-                        <XCircle size={14} /> Reject
+                      <button 
+                        className="btn-danger flex items-center gap-1 px-3 py-2 text-xs disabled:opacity-50" 
+                        onClick={() => handleReject(txn.id)} 
+                        disabled={loadingId === txn.id}
+                        type="button"
+                      >
+                        {loadingId === txn.id ? <Loader2 size={14} className="animate-spin" /> : <XCircle size={14} />} Reject
                       </button>
                     </div>
                   ) : "-"}

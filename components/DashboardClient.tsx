@@ -2,6 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { Copy, CreditCard, Landmark, LogOut, Send, UserRound, WalletCards, type LucideIcon } from "lucide-react";
+import { useRouter } from "next/navigation";
 import { money, initials } from "@/lib/format";
 
 type Profile = {
@@ -21,7 +22,7 @@ type Profile = {
 type Transaction = {
   id: string;
   amount: number;
-  status: "pending" | "approved" | "rejected";
+  status: "pending" | "completed" | "rejected";
   type: string;
   description: string;
   method_label?: string;
@@ -44,6 +45,7 @@ export function DashboardClient({
   transactions: Transaction[];
   paymentMethods: Method[];
 }) {
+  const router = useRouter();
   const [view, setView] = useState("overview");
   const [amount, setAmount] = useState("100");
   const [methodKey, setMethodKey] = useState(paymentMethods[0]?.key || "");
@@ -53,7 +55,7 @@ export function DashboardClient({
     () => transactions
       .filter(
         (txn) =>
-          txn.status === "approved" &&
+          txn.status === "completed" &&
           (txn.type === "deposit" || txn.type === "admin_adjustment")
       )
       .reduce((sum, txn) => sum + Number(txn.amount), 0),
@@ -76,6 +78,7 @@ export function DashboardClient({
     }
     setActiveMethod(payload.paymentMethod);
     setNotice("Deposit request created. Send the exact amount using the payment details below.");
+    router.refresh();
   }
 
   async function copy(text: string) {
@@ -154,7 +157,7 @@ export function DashboardClient({
               <p className="mt-1 text-sm text-grey">Create a deposit request and pay through one of the configured methods.</p>
               <div className="mt-6">
                 <label className="label">Amount</label>
-                <input className="input text-2xl font-black" min={10} required type="number" value={amount} onChange={(e) => setAmount(e.target.value)} />
+                <input className="input text-2xl font-black" min={50} required type="number" value={amount} onChange={(e) => setAmount(e.target.value)} />
               </div>
               <div className="mt-4">
                 <label className="label">Payment method</label>
