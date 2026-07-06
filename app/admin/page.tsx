@@ -25,13 +25,15 @@ export default async function AdminPage() {
         .from("transactions")
         .select("amount,type,status")
         .eq("user_id", user.id)
-        .eq("status", "completed");
+        .in("status", ["completed", "pending"]);
 
       const balance = (ledger || []).reduce((sum, txn) => {
-        if (txn.type === "deposit" || txn.type === "admin_adjustment") {
+        if (txn.status === "completed" && (txn.type === "deposit" || txn.type === "admin_adjustment")) {
           sum += Number(txn.amount);
         } else if (txn.type === "withdrawal" || txn.type === "transfer") {
-          sum -= Number(txn.amount);
+          if (txn.status === "completed" || txn.status === "pending") {
+            sum -= Number(txn.amount);
+          }
         }
         return sum;
       }, 0);
