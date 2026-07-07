@@ -51,6 +51,11 @@ export function DashboardClient({
   const [methodKey, setMethodKey] = useState(paymentMethods[0]?.key || "");
   const [notice, setNotice] = useState("");
   const [activeMethod, setActiveMethod] = useState<Method | null>(null);
+
+  const [withdrawAmount, setWithdrawAmount] = useState("50");
+  const [withdrawMethodLabel, setWithdrawMethodLabel] = useState(paymentMethods[0]?.label || "");
+  const [withdrawDestination, setWithdrawDestination] = useState("");
+
   const completedDeposits = useMemo(
     () => transactions
       .filter(
@@ -81,6 +86,25 @@ export function DashboardClient({
     router.refresh();
   }
 
+  async function requestWithdraw(e: React.FormEvent) {
+    e.preventDefault();
+    setNotice("");
+    const res = await fetch("/api/transactions/withdraw", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ amount: Number(withdrawAmount), methodLabel: withdrawMethodLabel, destination: withdrawDestination })
+    });
+    const payload = await res.json();
+    if (!res.ok) {
+      setNotice(payload.error || "Could not create withdrawal request.");
+      return;
+    }
+    setNotice("Withdrawal request submitted successfully.");
+    setWithdrawAmount("50");
+    setWithdrawDestination("");
+    router.refresh();
+  }
+
   async function copy(text: string) {
     await navigator.clipboard.writeText(text);
     setNotice("Copied to clipboard.");
@@ -107,6 +131,7 @@ export function DashboardClient({
         {([
           ["overview", WalletCards, "Overview"],
           ["deposit", CreditCard, "Add Money"],
+          ["withdraw", Landmark, "Withdraw"],
           ["transactions", Send, "Transactions"],
           ["profile", UserRound, "Profile"]
         ] as Array<[string, LucideIcon, string]>).map(([id, Icon, label]) => (
@@ -187,6 +212,30 @@ export function DashboardClient({
                 </div>
               ) : null}
             </div>
+          </section>
+        ) : null}
+
+        {view === "withdraw" ? (
+          <section className="grid gap-6 lg:grid-cols-2">
+            <form className="card p-6" onSubmit={requestWithdraw}>
+              <h2 className="font-head text-2xl font-bold">Withdraw</h2>
+              <p className="mt-1 text-sm text-grey">Request a withdrawal from your available balance.</p>
+              <div className="mt-6">
+                <label className="label">Amount (Min $50)</label>
+                <input className="input text-2xl font-black" min={50} required type="number" value={withdrawAmount} onChange={(e) => setWithdrawAmount(e.target.value)} />
+              </div>
+              <div className="mt-4">
+                <label className="label">Payment method</label>
+                <select className="select" required value={withdrawMethodLabel} onChange={(e) => setWithdrawMethodLabel(e.target.value)}>
+                  {paymentMethods.map((method) => <option key={method.key} value={method.label}>{method.label}</option>)}
+                </select>
+              </div>
+              <div className="mt-4">
+                <label className="label">Destination Details</label>
+                <textarea className="input min-h-[100px]" required placeholder="Enter bank account info or crypto wallet address..." value={withdrawDestination} onChange={(e) => setWithdrawDestination(e.target.value)} />
+              </div>
+              <button className="btn-primary mt-5 w-full" type="submit">Submit Request</button>
+            </form>
           </section>
         ) : null}
 

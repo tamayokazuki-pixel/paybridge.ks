@@ -96,7 +96,7 @@ export function AdminClient({
         {([
           ["overview", Shield, "Overview"],
           ["users", Users, "Users"],
-          ["deposits", CreditCard, "Deposits"],
+          ["requests", CreditCard, "Requests"],
           ["methods", Settings, "Payment Methods"]
         ] as Array<[string, LucideIcon, string]>).map(([id, Icon, label]) => (
           <button className={`nav-link w-full ${view === id ? "active" : ""}`} key={String(id)} onClick={() => setView(String(id))}>
@@ -125,7 +125,7 @@ export function AdminClient({
               <Stat label="Pending deposits" value={String(pending.length)} />
               <Stat label="Credited" value={money(credited)} />
             </div>
-            <DepositTable transactions={pending.slice(0, 8)} onApprove={(id) => post("/api/admin/transactions/approve", { transactionId: id })} onReject={(id) => post("/api/admin/transactions/reject", { transactionId: id })} />
+            <RequestsTable transactions={pending.slice(0, 8)} onApprove={(id) => post("/api/admin/transactions/approve", { transactionId: id })} onReject={(id) => post("/api/admin/transactions/reject", { transactionId: id })} />
           </section>
         ) : null}
 
@@ -172,8 +172,8 @@ export function AdminClient({
           </section>
         ) : null}
 
-        {view === "deposits" ? (
-          <DepositTable transactions={transactions} onApprove={(id) => post("/api/admin/transactions/approve", { transactionId: id })} onReject={(id) => post("/api/admin/transactions/reject", { transactionId: id })} />
+        {view === "requests" ? (
+          <RequestsTable transactions={transactions} onApprove={(id) => post("/api/admin/transactions/approve", { transactionId: id })} onReject={(id) => post("/api/admin/transactions/reject", { transactionId: id })} />
         ) : null}
 
         {view === "methods" ? (
@@ -214,7 +214,7 @@ function Stat({ label, value }: { label: string; value: string }) {
   );
 }
 
-function DepositTable({
+function RequestsTable({
   transactions,
   onApprove,
   onReject
@@ -240,12 +240,12 @@ function DepositTable({
   return (
     <section className="card overflow-hidden">
       <div className="border-b border-slate-100 p-5">
-        <h2 className="font-head text-xl font-bold">Deposit Requests</h2>
+        <h2 className="font-head text-xl font-bold">Requests</h2>
       </div>
       <div className="table-wrap">
         <table>
           <thead>
-            <tr><th>User</th><th>Amount</th><th>Method</th><th>Status</th><th>Date</th><th>Actions</th></tr>
+            <tr><th>User</th><th>Amount</th><th>Method</th><th>Description</th><th>Status</th><th>Date</th><th>Actions</th></tr>
           </thead>
           <tbody>
             {transactions.length ? transactions.map((txn) => (
@@ -256,6 +256,7 @@ function DepositTable({
                 </td>
                 <td>{money(txn.amount)}</td>
                 <td>{txn.method_label}</td>
+                <td className="max-w-[200px] truncate" title={txn.description}>{txn.description}</td>
                 <td><span className={`pill ${txn.status}`}>{txn.status}</span></td>
                 <td>{new Date(txn.created_at).toLocaleDateString()}</td>
                 <td>
@@ -282,7 +283,7 @@ function DepositTable({
                 </td>
               </tr>
             )) : (
-              <tr><td className="py-8 text-center text-grey" colSpan={6}>No deposit requests found.</td></tr>
+              <tr><td className="py-8 text-center text-grey" colSpan={7}>No requests found.</td></tr>
             )}
           </tbody>
         </table>
