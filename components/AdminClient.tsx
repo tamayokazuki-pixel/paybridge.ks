@@ -122,7 +122,7 @@ export function AdminClient({
             <div className="grid gap-5 md:grid-cols-4">
               <Stat label="Users" value={String(profiles.length)} />
               <Stat label="Active users" value={String(activeUsers.length)} />
-              <Stat label="Pending deposits" value={String(pending.length)} />
+              <Stat label="Pending requests" value={String(pending.length)} />
               <Stat label="Credited" value={money(credited)} />
             </div>
             <RequestsTable transactions={pending.slice(0, 8)} onApprove={(id) => post("/api/admin/transactions/approve", { transactionId: id })} onReject={(id) => post("/api/admin/transactions/reject", { transactionId: id })} />
@@ -223,18 +223,18 @@ function RequestsTable({
   onApprove: (id: string) => Promise<unknown>;
   onReject: (id: string) => Promise<unknown>;
 }) {
-  const [loadingId, setLoadingId] = useState<string | null>(null);
+  const [loadingState, setLoadingState] = useState<{ id: string, action: 'approve' | 'reject' } | null>(null);
 
   const handleApprove = async (id: string) => {
-    setLoadingId(id);
+    setLoadingState({ id, action: 'approve' });
     await onApprove(id);
-    setLoadingId(null);
+    setLoadingState(null);
   };
 
   const handleReject = async (id: string) => {
-    setLoadingId(id);
+    setLoadingState({ id, action: 'reject' });
     await onReject(id);
-    setLoadingId(null);
+    setLoadingState(null);
   };
 
   return (
@@ -245,7 +245,7 @@ function RequestsTable({
       <div className="table-wrap">
         <table>
           <thead>
-            <tr><th>User</th><th>Amount</th><th>Method</th><th>Description</th><th>Status</th><th>Date</th><th>Actions</th></tr>
+            <tr><th>User</th><th>Type</th><th>Amount</th><th>Method</th><th>Description</th><th>Status</th><th>Date</th><th>Actions</th></tr>
           </thead>
           <tbody>
             {transactions.length ? transactions.map((txn) => (
@@ -254,9 +254,10 @@ function RequestsTable({
                   <p className="font-bold">{txn.users?.full_name || "Unknown user"}</p>
                   <p className="text-xs text-grey">{txn.users?.account_id || ""}</p>
                 </td>
+                <td className="capitalize">{txn.type.replace('_', ' ')}</td>
                 <td>{money(txn.amount)}</td>
                 <td>{txn.method_label}</td>
-                <td className="max-w-[200px] truncate" title={txn.description}>{txn.description}</td>
+                <td className="max-w-[300px] break-words">{txn.description}</td>
                 <td><span className={`pill ${txn.status}`}>{txn.status}</span></td>
                 <td>{new Date(txn.created_at).toLocaleDateString()}</td>
                 <td>
@@ -265,25 +266,25 @@ function RequestsTable({
                       <button 
                         className="btn-secondary px-3 py-2 text-xs text-teal2 disabled:opacity-50" 
                         onClick={() => handleApprove(txn.id)} 
-                        disabled={loadingId === txn.id}
+                        disabled={loadingState?.id === txn.id}
                         type="button"
                       >
-                        {loadingId === txn.id ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle size={14} />} Approve
+                        {loadingState?.id === txn.id && loadingState?.action === 'approve' ? <Loader2 size={14} className="animate-spin" /> : <CheckCircle size={14} />} Approve
                       </button>
                       <button 
                         className="btn-danger flex items-center gap-1 px-3 py-2 text-xs disabled:opacity-50" 
                         onClick={() => handleReject(txn.id)} 
-                        disabled={loadingId === txn.id}
+                        disabled={loadingState?.id === txn.id}
                         type="button"
                       >
-                        {loadingId === txn.id ? <Loader2 size={14} className="animate-spin" /> : <XCircle size={14} />} Reject
+                        {loadingState?.id === txn.id && loadingState?.action === 'reject' ? <Loader2 size={14} className="animate-spin" /> : <XCircle size={14} />} Reject
                       </button>
                     </div>
                   ) : "-"}
                 </td>
               </tr>
             )) : (
-              <tr><td className="py-8 text-center text-grey" colSpan={7}>No requests found.</td></tr>
+              <tr><td className="py-8 text-center text-grey" colSpan={8}>No requests found.</td></tr>
             )}
           </tbody>
         </table>
