@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { DashboardClient } from "@/components/DashboardClient";
 import { ensureProfile } from "@/lib/auth";
 import { createSupabaseAdminClient } from "@/lib/supabase-server";
+import { normalizeStatus } from "@/lib/transaction-status";
 
 export default async function DashboardPage() {
   const profile = await ensureProfile();
@@ -21,16 +22,13 @@ export default async function DashboardPage() {
     supabase.from("payment_methods").select("*").eq("is_active", true).order("label")
   ]);
 
-  const { data: ledgerBalanceData } = await supabase
-    .from("transactions")
-    .select("amount,type,status")
-    .eq("user_id", profile.id)
-    .in("status", ["completed", "pending"]);
+  // Older rows can still carry the legacy status values ('failed', 'approved').
+  const ledger = (transactions || []).map((txn) => ({ ...txn, status: normalizeStatus(txn.status) }));
 
-  const ledgerBalance = (ledgerBalanceData || []).reduce((sum, txn) => {
+  const ledgerBalance = ledger.reduce((sum, txn) => {
     if (txn.status === "completed" && (txn.type === "deposit" || txn.type === "admin_adjustment")) {
       sum += Number(txn.amount);
-    } else if (txn.type === "withdrawal" || txn.type === "transfer") {
+    } else if (txn.type === "withdrawal" || txn.type === "transfer" || txn.type === "withdraw") {
       if (txn.status === "completed" || txn.status === "pending") {
         sum -= Number(txn.amount);
       }
@@ -41,7 +39,7 @@ export default async function DashboardPage() {
   return (
     <DashboardClient
       profile={{ ...profile, balance: ledgerBalance }}
-      transactions={transactions || []}
+      transactions={ledger}
       paymentMethods={paymentMethods || []}
     />
   );

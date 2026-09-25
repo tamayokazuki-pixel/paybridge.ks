@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { CheckCircle, CreditCard, LogOut, Settings, Shield, Users, XCircle, Loader2, type LucideIcon } from "lucide-react";
 import { money, initials } from "@/lib/format";
+import { normalizeStatus, statusLabel, type TransactionStatus } from "@/lib/transaction-status";
 
 type Profile = {
   id: string;
@@ -59,18 +60,35 @@ export function AdminClient({
 
   async function post(url: string, body: unknown) {
     setNotice("");
-    const res = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body)
-    });
-    const payload = await res.json();
-    if (!res.ok) {
-      setNotice(payload.error || "Action failed.");
+    try {
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body)
+      });
+
+      // The response is not always JSON (a redirect from an expired session, or a
+      // framework error page), so read it as text first. Without this the old code
+      // threw on res.json() and the button silently did nothing.
+      const text = await res.text();
+      let payload: { error?: string; detail?: string } | null = null;
+      try {
+        payload = text ? JSON.parse(text) : null;
+      } catch {
+        payload = null;
+      }
+
+      if (!res.ok) {
+        setNotice(payload?.error || `Action failed (HTTP ${res.status}). Please sign in again and retry.`);
+        return false;
+      }
+
+      window.location.reload();
+      return true;
+    } catch (error) {
+      setNotice(`Action failed: ${error instanceof Error ? error.message : "network error"}`);
       return false;
     }
-    window.location.reload();
-    return true;
   }
 
   async function saveMethod(method: Method) {
@@ -227,14 +245,20 @@ function RequestsTable({
 
   const handleApprove = async (id: string) => {
     setLoadingState({ id, action: 'approve' });
-    await onApprove(id);
-    setLoadingState(null);
+    try {
+      await onApprove(id);
+    } finally {
+      setLoadingState(null);
+    }
   };
 
   const handleReject = async (id: string) => {
     setLoadingState({ id, action: 'reject' });
-    await onReject(id);
-    setLoadingState(null);
+    try {
+      await onReject(id);
+    } finally {
+      setLoadingState(null);
+    }
   };
 
   return (
@@ -258,10 +282,10 @@ function RequestsTable({
                 <td>{money(txn.amount)}</td>
                 <td>{txn.method_label}</td>
                 <td className="max-w-[300px] break-words">{txn.description}</td>
-                <td><span className={`pill ${txn.status}`}>{txn.status}</span></td>
+                <td><span className={`pill ${normalizeStatus(txn.status)}`}>{statusLabel(txn.status)}</span></td>
                 <td>{new Date(txn.created_at).toLocaleDateString()}</td>
                 <td>
-                  {txn.status === "pending" ? (
+                  {normalizeStatus(txn.status) === "pending" ? (
                     <div className="flex flex-wrap gap-2">
                       <button 
                         className="btn-secondary px-3 py-2 text-xs text-teal2 disabled:opacity-50" 

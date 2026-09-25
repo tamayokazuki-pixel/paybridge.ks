@@ -215,6 +215,7 @@ td {
   color: #9b701d;
 }
 
+.pill.rejected,
 .pill.failed,
 .pill.suspended {
   background: rgba(255, 77, 109, .12);

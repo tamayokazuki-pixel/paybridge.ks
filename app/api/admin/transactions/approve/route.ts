@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { requireAdmin } from "@/lib/auth";
+import { getAdminUser } from "@/lib/auth";
 import { createSupabaseAdminClient } from "@/lib/supabase-server";
+import { describeDbError, finalizeTransaction } from "@/lib/transactions";
 
 const schema = z.object({
   transactionId: z.string().uuid(),
@@ -9,38 +10,62 @@ const schema = z.object({
 });
 
 export async function POST(request: Request) {
-  const adminUser = await requireAdmin();
-  const { transactionId, reference } = schema.parse(await request.json());
-  const supabase = createSupabaseAdminClient();
+  const adminUser = await getAdminUser();
+  if (!adminUser) {
+    return NextResponse.json({ error: "Admin access required. Please sign in again." }, { status: 403 });
+  }
 
-  const { data: txn } = await supabase
-    .from("transactions")
-    .select("*")
-    .eq("id", transactionId)
-    .eq("status", "pending")
-    .single();
+  const parsed = schema.safeParse(await request.json().catch(() => null));
+  if (!parsed.success) {
+    return NextResponse.json({ error: parsed.error.issues[0]?.message || "Invalid request body." }, { status: 400 });
+  }
+  const { transactionId, reference } = parsed.data;
 
-  if (!txn) return NextResponse.json({ error: "Pending transaction not found." }, { status: 404 });
+  try {
+    const supabase = createSupabaseAdminClient();
+    const { data: txn } = await supabase
+      .from("transactions")
+      .select("*")
+      .eq("id", transactionId)
+      .eq("status", "pending")
+      .maybeSingle();
 
-  const { data, error } = await supabase
-    .from("transactions")
-    .update({
+    if (!txn) {
+      return NextResponse.json(
+        { error: "Pending transaction not found. It may have already been approved or rejected." },
+        { status: 404 }
+      );
+    }
+
+    const { data, error, legacyStatus } = await finalizeTransaction(supabase, transactionId, {
       status: "completed",
-      reference: reference || null,
+      reference: reference?.trim() || null,
       completed_at: new Date().toISOString()
-    })
-    .eq("id", transactionId)
-    .select("*")
-    .single();
+    });
 
-  if (error) return NextResponse.json({ error: error.message }, { status: 400 });
+    if (error) {
+      console.error("Approve transaction failed:", error);
+      return NextResponse.json(
+        { error: `Could not approve this transaction: ${describeDbError(error)}` },
+        { status: 400 }
+      );
+    }
 
-  await supabase.from("activity_logs").insert({
-    actor_id: adminUser.id,
-    user_id: txn.user_id,
-    action: "transaction_approved",
-    details: `Approved transaction ${transactionId}`
-  });
+    // Best effort: the log entry must not fail the approval itself.
+    const { error: logError } = await supabase.from("activity_logs").insert({
+      actor_id: adminUser.id,
+      user_id: txn.user_id,
+      action: "transaction_approved",
+      details: `Approved transaction ${transactionId}`
+    });
+    if (logError) console.error("Could not write activity log:", logError.message);
 
-  return NextResponse.json({ transaction: data });
+    return NextResponse.json({ transaction: data, legacyStatus });
+  } catch (error) {
+    console.error("Approve transaction crashed:", error);
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : "Unexpected server error." },
+      { status: 500 }
+    );
+  }
 }
