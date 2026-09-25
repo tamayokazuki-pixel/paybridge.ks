@@ -15,19 +15,37 @@ export async function requireUser() {
   return user;
 }
 
-export async function requireAdmin() {
-  const user = await requireUser();
+async function getAdminProfile(userId: string) {
   const admin = createSupabaseAdminClient();
   const { data: profile } = await admin
     .from("users")
     .select("role,is_verified")
-    .eq("id", user.id)
-    .single();
+    .eq("id", userId)
+    .maybeSingle();
 
-  if (!profile || profile.role !== "admin" || !profile.is_verified) {
-    redirect("/dashboard");
-  }
+  if (!profile || profile.role !== "admin" || !profile.is_verified) return null;
+  return profile;
+}
 
+/**
+ * For API routes. Unlike requireAdmin() this never calls redirect(): a redirect
+ * inside a route handler returns an HTML page, which the admin console used to
+ * swallow, so a rejected action looked like "nothing happened".
+ * Returns null when the caller is not a signed in admin.
+ */
+export async function getAdminUser() {
+  const user = await getCurrentUser();
+  if (!user) return null;
+  const profile = await getAdminProfile(user.id);
+  if (!profile) return null;
+  return user;
+}
+
+/** For pages: bounces non-admins back to their dashboard. */
+export async function requireAdmin() {
+  const user = await requireUser();
+  const profile = await getAdminProfile(user.id);
+  if (!profile) redirect("/dashboard");
   return user;
 }
 

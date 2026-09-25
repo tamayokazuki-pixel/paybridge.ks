@@ -29,11 +29,15 @@ create table if not exists public.payment_methods (
   updated_at timestamptz not null default now()
 );
 
+-- status/type vocabulary must match the application:
+--   approve -> 'completed', reject -> 'rejected'  (see lib/transaction-status.ts)
+-- Databases created before this line used 'approved' / 'failed'; if the admin
+-- console cannot reject a transaction, run supabase/fix_transactions_status.sql.
 create table if not exists public.transactions (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references public.users(id) on delete cascade,
   type text not null check (type in ('deposit', 'withdrawal', 'transfer', 'admin_adjustment')),
-  status text not null default 'pending' check (status in ('pending', 'approved', 'rejected')),
+  status text not null default 'pending' check (status in ('pending', 'completed', 'rejected')),
   amount numeric(14,2) not null check (amount >= 0),
   description text not null,
   method_key text,
