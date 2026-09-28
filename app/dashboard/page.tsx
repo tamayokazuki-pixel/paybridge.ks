@@ -3,11 +3,12 @@ import { DashboardClient } from "@/components/DashboardClient";
 import { ensureProfile } from "@/lib/auth";
 import { createSupabaseAdminClient } from "@/lib/supabase-server";
 import { normalizeStatus } from "@/lib/transaction-status";
+import { availableBalance } from "@/lib/balance";
 
 export default async function DashboardPage() {
   const profile = await ensureProfile();
 
-  if (profile.role === "admin" && profile.is_verified) {
+  if (profile.role === "admin" && profile.is_verified && profile.status === "active") {
     redirect("/admin");
   }
 
@@ -25,16 +26,7 @@ export default async function DashboardPage() {
   // Older rows can still carry the legacy status values ('failed', 'approved').
   const ledger = (transactions || []).map((txn) => ({ ...txn, status: normalizeStatus(txn.status) }));
 
-  const ledgerBalance = ledger.reduce((sum, txn) => {
-    if (txn.status === "completed" && (txn.type === "deposit" || txn.type === "admin_adjustment")) {
-      sum += Number(txn.amount);
-    } else if (txn.type === "withdrawal" || txn.type === "transfer" || txn.type === "withdraw") {
-      if (txn.status === "completed" || txn.status === "pending") {
-        sum -= Number(txn.amount);
-      }
-    }
-    return sum;
-  }, 0);
+  const ledgerBalance = availableBalance(ledger);
 
   return (
     <DashboardClient

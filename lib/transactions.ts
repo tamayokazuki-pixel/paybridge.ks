@@ -73,7 +73,8 @@ export function describeDbError(error: DbError): string {
 export async function finalizeTransaction(
   supabase: SupabaseAdmin,
   transactionId: string,
-  fields: { status: TransactionStatus; admin_note?: string | null; reference?: string | null; completed_at?: string }
+  fields: { status: TransactionStatus; admin_note?: string | null; reference?: string | null; completed_at?: string },
+  options: { requiredColumns?: readonly string[] } = {}
 ): Promise<WriteResult<Record<string, unknown>>> {
   const payload: Record<string, unknown> = { ...fields };
   let legacyStatus = false;
@@ -92,8 +93,9 @@ export async function finalizeTransaction(
     }
 
     const column = missingColumn(error);
-    if (column && column in payload) {
-      // The table does not have this column yet: write the rest of the change.
+    if (column && column in payload && !options.requiredColumns?.includes(column)) {
+      // Legacy databases may lack optional columns. Never discard cheque audit
+      // fields (reference or rejection reason) when they are required.
       delete payload[column];
       continue;
     }
@@ -124,7 +126,8 @@ export async function finalizeTransaction(
  */
 export async function insertTransaction(
   supabase: SupabaseAdmin,
-  row: Record<string, unknown>
+  row: Record<string, unknown>,
+  options: { requiredColumns?: readonly string[] } = {}
 ): Promise<WriteResult<Record<string, unknown>>> {
   const payload: Record<string, unknown> = { ...row };
 
@@ -133,7 +136,7 @@ export async function insertTransaction(
     if (!error) return { data: data as Record<string, unknown>, error: null, legacyStatus: false };
 
     const column = missingColumn(error);
-    if (column && column in payload) {
+    if (column && column in payload && !options.requiredColumns?.includes(column)) {
       delete payload[column];
       continue;
     }

@@ -1,9 +1,12 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Copy, CreditCard, Landmark, LogOut, Send, UserRound, WalletCards, type LucideIcon } from "lucide-react";
+import { Copy, CreditCard, Landmark, LogOut, ScanLine, Send, UserRound, WalletCards, type LucideIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { money, initials } from "@/lib/format";
+import { ChequeDetails } from "@/components/ChequeDetails";
+import { ChequePanel } from "@/components/ChequePanel";
+import { isChequeTransaction } from "@/lib/cheques";
 
 type Profile = {
   id: string;
@@ -17,6 +20,7 @@ type Profile = {
   country?: string;
   username?: string;
   role: string;
+  status: "active" | "suspended";
 };
 
 type Transaction = {
@@ -26,6 +30,10 @@ type Transaction = {
   type: string;
   description: string;
   method_label?: string;
+  method_key?: string | null;
+  cheque_details?: unknown;
+  reference?: string | null;
+  admin_note?: string | null;
   created_at: string;
 };
 
@@ -53,7 +61,7 @@ export function DashboardClient({
   const [activeMethod, setActiveMethod] = useState<Method | null>(null);
 
   const [withdrawAmount, setWithdrawAmount] = useState("50");
-  const [withdrawMethodLabel, setWithdrawMethodLabel] = useState(paymentMethods[0]?.label || "");
+  const [withdrawMethodKey, setWithdrawMethodKey] = useState(paymentMethods[0]?.key || "");
   const [withdrawDestination, setWithdrawDestination] = useState("");
 
   const completedDeposits = useMemo(
@@ -66,7 +74,7 @@ export function DashboardClient({
       .reduce((sum, txn) => sum + Number(txn.amount), 0),
     [transactions]
   );
-  const pending = transactions.filter((txn) => txn.status === "pending").length;
+  const pendingDeposits = transactions.filter((txn) => txn.status === "pending" && txn.type === "deposit").length;
 
   async function requestDeposit(e: React.FormEvent) {
     e.preventDefault();
@@ -92,7 +100,7 @@ export function DashboardClient({
     const res = await fetch("/api/transactions/withdraw", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ amount: Number(withdrawAmount), methodLabel: withdrawMethodLabel, destination: withdrawDestination })
+      body: JSON.stringify({ amount: Number(withdrawAmount), paymentMethodKey: withdrawMethodKey, destination: withdrawDestination })
     });
     const payload = await res.json();
     if (!res.ok) {
@@ -132,6 +140,7 @@ export function DashboardClient({
           ["overview", WalletCards, "Overview"],
           ["deposit", CreditCard, "Add Money"],
           ["withdraw", Landmark, "Withdraw"],
+          ["cheques", ScanLine, "Cheques"],
           ["transactions", Send, "Transactions"],
           ["profile", UserRound, "Profile"]
         ] as Array<[string, LucideIcon, string]>).map(([id, Icon, label]) => (
@@ -152,11 +161,16 @@ export function DashboardClient({
             <p className="text-sm text-grey">Good day,</p>
             <h1 className="font-head text-3xl font-bold">{fullName}</h1>
           </div>
-          {profile.role === "admin" ? (
+          {profile.role === "admin" && profile.status === "active" ? (
             <a className="btn-secondary" href="/admin">Admin panel</a>
           ) : null}
         </div>
 
+        {profile.status === "suspended" ? (
+          <div className="mb-5 rounded-lg border border-red-200 bg-red-50 p-3 text-sm font-bold text-red-700" role="alert">
+            Your account is suspended. New deposit and withdrawal requests are unavailable; please contact support.
+          </div>
+        ) : null}
         {notice ? <div className="mb-5 rounded-lg border border-teal/20 bg-teal/10 p-3 text-sm font-bold text-teal2">{notice}</div> : null}
 
         {view === "overview" ? (
@@ -168,7 +182,7 @@ export function DashboardClient({
             </div>
             <div className="grid gap-5 md:grid-cols-3">
               <Stat label="Total deposited" value={money(completedDeposits)} icon={<Landmark />} />
-              <Stat label="Pending deposits" value={String(pending)} icon={<CreditCard />} />
+              <Stat label="Pending deposits" value={String(pendingDeposits)} icon={<CreditCard />} />
               <Stat label="Transactions" value={String(transactions.length)} icon={<Send />} />
             </div>
             <TransactionList transactions={transactions.slice(0, 5)} />
@@ -179,7 +193,7 @@ export function DashboardClient({
           <section className="grid gap-6 lg:grid-cols-2">
             <form className="card p-6" onSubmit={requestDeposit}>
               <h2 className="font-head text-2xl font-bold">Add money</h2>
-              <p className="mt-1 text-sm text-grey">Create a deposit request and pay through one of the configured methods.</p>
+              <p className="mt-1 text-sm text-grey">Create a deposit request and pay through one of the configured methods. Have a paper cheque? <button className="font-bold text-teal2 underline" onClick={() => setView("cheques")} type="button">Deposit a cheque instead</button>.</p>
               <div className="mt-6">
                 <label className="label">Amount</label>
                 <input className="input text-2xl font-black" min={50} required type="number" value={amount} onChange={(e) => setAmount(e.target.value)} />
@@ -190,7 +204,7 @@ export function DashboardClient({
                   {paymentMethods.map((method) => <option key={method.key} value={method.key}>{method.label}</option>)}
                 </select>
               </div>
-              <button className="btn-primary mt-5 w-full" type="submit">Request deposit details</button>
+              <button className="btn-primary mt-5 w-full disabled:opacity-50" disabled={profile.status !== "active"} type="submit">Request deposit details</button>
             </form>
             <div className="card p-6">
               <h3 className="font-head text-xl font-bold">Payment details</h3>
@@ -219,25 +233,27 @@ export function DashboardClient({
           <section className="grid gap-6 lg:grid-cols-2">
             <form className="card p-6" onSubmit={requestWithdraw}>
               <h2 className="font-head text-2xl font-bold">Withdraw</h2>
-              <p className="mt-1 text-sm text-grey">Request a withdrawal from your available balance.</p>
+              <p className="mt-1 text-sm text-grey">Request a withdrawal from your available balance. Prefer a mailed cheque? <button className="font-bold text-teal2 underline" onClick={() => setView("cheques")} type="button">Withdraw by cheque</button>.</p>
               <div className="mt-6">
                 <label className="label">Amount (Min $50)</label>
                 <input className="input text-2xl font-black" min={50} required type="number" value={withdrawAmount} onChange={(e) => setWithdrawAmount(e.target.value)} />
               </div>
               <div className="mt-4">
                 <label className="label">Payment method</label>
-                <select className="select" required value={withdrawMethodLabel} onChange={(e) => setWithdrawMethodLabel(e.target.value)}>
-                  {paymentMethods.map((method) => <option key={method.key} value={method.label}>{method.label}</option>)}
+                <select className="select" required value={withdrawMethodKey} onChange={(e) => setWithdrawMethodKey(e.target.value)}>
+                  {paymentMethods.map((method) => <option key={method.key} value={method.key}>{method.label}</option>)}
                 </select>
               </div>
               <div className="mt-4">
                 <label className="label">Destination Details</label>
                 <textarea className="input min-h-[100px]" required placeholder="Enter bank account info or crypto wallet address..." value={withdrawDestination} onChange={(e) => setWithdrawDestination(e.target.value)} />
               </div>
-              <button className="btn-primary mt-5 w-full" type="submit">Submit Request</button>
+              <button className="btn-primary mt-5 w-full disabled:opacity-50" disabled={profile.status !== "active"} type="submit">Submit Request</button>
             </form>
           </section>
         ) : null}
+
+        {view === "cheques" ? <ChequePanel availableBalance={profile.balance} accountName={fullName} accountActive={profile.status === "active"} onSubmitted={() => router.refresh()} /> : null}
 
         {view === "transactions" ? <TransactionList transactions={transactions} /> : null}
 
@@ -279,33 +295,47 @@ function Stat({ label, value, icon }: { label: string; value: string; icon: Reac
 }
 
 function TransactionList({ transactions }: { transactions: Transaction[] }) {
+  const [selectedCheque, setSelectedCheque] = useState<Transaction | null>(null);
+
   return (
-    <div className="card overflow-hidden">
-      <div className="border-b border-slate-100 p-5">
-        <h2 className="font-head text-xl font-bold">Transactions</h2>
-      </div>
-      {transactions.length ? (
-        <div className="table-wrap">
-          <table>
-            <thead>
-              <tr><th>Description</th><th>Method</th><th>Amount</th><th>Status</th><th>Date</th></tr>
-            </thead>
-            <tbody>
-              {transactions.map((txn) => (
-                <tr key={txn.id}>
-                  <td className="font-bold">{txn.description}</td>
-                  <td>{txn.method_label || "Internal"}</td>
-                  <td>{money(txn.amount)}</td>
-                  <td><span className={`pill ${txn.status}`}>{txn.status}</span></td>
-                  <td>{new Date(txn.created_at).toLocaleDateString()}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+    <div className="space-y-4">
+      {selectedCheque ? (
+        <ChequeDetails key={selectedCheque.id} transaction={selectedCheque} onClose={() => setSelectedCheque(null)} />
+      ) : null}
+      <div className="card overflow-hidden">
+        <div className="border-b border-slate-100 p-5">
+          <h2 className="font-head text-xl font-bold">Transactions</h2>
         </div>
-      ) : (
-        <p className="p-8 text-center text-grey">No transactions yet.</p>
-      )}
+        {transactions.length ? (
+          <div className="table-wrap">
+            <table>
+              <thead>
+                <tr><th>Description</th><th>Method</th><th>Amount</th><th>Status</th><th>Date</th><th>Details</th></tr>
+              </thead>
+              <tbody>
+                {transactions.map((txn) => (
+                  <tr key={txn.id}>
+                    <td className="font-bold">{txn.description}</td>
+                    <td>{txn.method_label || "Internal"}</td>
+                    <td>{money(txn.amount)}</td>
+                    <td><span className={`pill ${txn.status}`}>{txn.status}</span></td>
+                    <td>{new Date(txn.created_at).toLocaleDateString()}</td>
+                    <td>
+                      {isChequeTransaction(txn) ? (
+                        <button className="text-sm font-bold text-teal2 underline" onClick={() => setSelectedCheque(txn)} type="button">View cheque</button>
+                      ) : txn.admin_note || txn.reference ? (
+                        <span className="text-sm">{txn.admin_note || txn.reference}</span>
+                      ) : "–"}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <p className="p-8 text-center text-grey">No transactions yet.</p>
+        )}
+      </div>
     </div>
   );
 }

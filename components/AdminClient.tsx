@@ -1,9 +1,12 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { CheckCircle, CreditCard, LogOut, Settings, Shield, Users, XCircle, Loader2, type LucideIcon } from "lucide-react";
+import { CheckCircle, CreditCard, LogOut, ScanLine, Settings, Shield, Users, XCircle, Loader2, type LucideIcon } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { ChequeDetails } from "@/components/ChequeDetails";
+import { chequeDetailsSchema, isChequeTransaction } from "@/lib/cheques";
 import { money, initials } from "@/lib/format";
-import { normalizeStatus, statusLabel, type TransactionStatus } from "@/lib/transaction-status";
+import { normalizeStatus, statusLabel } from "@/lib/transaction-status";
 
 type Profile = {
   id: string;
@@ -24,6 +27,10 @@ type Transaction = {
   type: string;
   description: string;
   method_label?: string;
+  method_key?: string | null;
+  cheque_details?: unknown;
+  reference?: string | null;
+  admin_note?: string | null;
   created_at: string;
   users?: { full_name: string; email: string; account_id: string };
 };
@@ -45,10 +52,20 @@ export function AdminClient({
   transactions: Transaction[];
   paymentMethods: Method[];
 }) {
+  const router = useRouter();
   const [view, setView] = useState("overview");
   const [notice, setNotice] = useState("");
   const [methods, setMethods] = useState(paymentMethods);
+  const [selectedCheque, setSelectedCheque] = useState<Transaction | null>(null);
+  const [chequeFilter, setChequeFilter] = useState<"all" | "pending" | "deposit" | "withdrawal">("all");
+  const [imagesReady, setImagesReady] = useState(false);
+  const [reference, setReference] = useState("");
+  const [reason, setReason] = useState("");
+  const [chequeBusy, setChequeBusy] = useState(false);
   const pending = transactions.filter((txn) => txn.status === "pending");
+  const cheques = transactions.filter(isChequeTransaction);
+  const pendingCheques = cheques.filter((txn) => txn.status === "pending");
+  const visibleCheques = cheques.filter((txn) => chequeFilter === "all" || txn.status === chequeFilter || txn.type === chequeFilter);
   const credited = transactions
     .filter(
       (txn) =>
@@ -83,11 +100,57 @@ export function AdminClient({
         return false;
       }
 
-      window.location.reload();
+      router.refresh();
       return true;
     } catch (error) {
       setNotice(`Action failed: ${error instanceof Error ? error.message : "network error"}`);
       return false;
+    }
+  }
+
+  function openCheque(transaction: Transaction) {
+    setSelectedCheque(transaction);
+    setImagesReady(false);
+    setReference(transaction.reference || "");
+    setReason("");
+    setNotice("");
+  }
+
+  async function processCheque(action: "approve" | "reject") {
+    if (!selectedCheque || chequeBusy) return;
+    const details = chequeDetailsSchema.safeParse(selectedCheque.cheque_details);
+    if (action === "approve" && (!details.success || details.data.kind !== selectedCheque.type)) {
+      setNotice("This cheque is missing required details. Do not approve it.");
+      return;
+    }
+    if (action === "approve" && selectedCheque.type === "deposit" && !imagesReady) {
+      setNotice("Load and inspect both cheque images before approving a deposit.");
+      return;
+    }
+    if (action === "approve" && selectedCheque.type === "withdrawal" && !reference.trim()) {
+      setNotice("Record a cheque number or dispatch reference before approving a withdrawal.");
+      return;
+    }
+    if (action === "reject" && !reason.trim()) {
+      setNotice("Enter a reason to reject this cheque request.");
+      return;
+    }
+    const prompt = action === "approve" && selectedCheque.type === "deposit"
+      ? "Have you verified this cheque and confirmed that the funds have cleared? Approving credits the account."
+      : action === "approve"
+        ? "Have you issued/arranged this cheque? Approving finalizes the debit."
+        : "Reject this cheque request? A withdrawal hold will be released.";
+    if (!window.confirm(prompt)) return;
+
+    setChequeBusy(true);
+    try {
+      const success = await post(`/api/admin/transactions/${action}`, {
+        transactionId: selectedCheque.id,
+        ...(action === "approve" ? { reference: reference.trim() } : { reason: reason.trim() })
+      });
+      if (success) setSelectedCheque(null);
+    } finally {
+      setChequeBusy(false);
     }
   }
 
@@ -104,6 +167,37 @@ export function AdminClient({
     setMethods((current) => current.map((method) => method.id === id ? updater(method) : method));
   }
 
+  const chequeReview = selectedCheque ? (
+    <div className="space-y-3">
+      <p className="text-sm font-semibold">Request from {selectedCheque.users?.full_name || "Unknown user"} · {selectedCheque.users?.account_id}</p>
+      <ChequeDetails key={selectedCheque.id} transaction={selectedCheque} onClose={() => setSelectedCheque(null)} onImagesReady={setImagesReady}>
+        {selectedCheque.status === "pending" ? (
+          <div className="mt-6 space-y-4 border-t border-slate-100 pt-5">
+            <p className="text-sm text-slate-600">
+              {selectedCheque.type === "deposit"
+                ? "Check both images and confirm the funds have cleared before crediting this deposit."
+                : "Confirm the payee and mailing address, issue the cheque, then record its number or dispatch reference."}
+            </p>
+            <div>
+              <label className="label" htmlFor="cheque-reference">{selectedCheque.type === "withdrawal" ? "Cheque number / dispatch reference (required)" : "Clearing reference (optional)"}</label>
+              <input className="input" id="cheque-reference" maxLength={100} onChange={(e) => setReference(e.target.value)} value={reference} />
+            </div>
+            <button className="btn-primary disabled:opacity-50" disabled={chequeBusy || (selectedCheque.type === "deposit" && !imagesReady)} onClick={() => processCheque("approve")} type="button">
+              {chequeBusy ? <Loader2 className="animate-spin" size={16} /> : <CheckCircle size={16} />} Approve cheque {selectedCheque.type}
+            </button>
+            <div>
+              <label className="label" htmlFor="cheque-reason">Rejection reason (required)</label>
+              <textarea className="textarea min-h-[80px]" id="cheque-reason" maxLength={500} onChange={(e) => setReason(e.target.value)} placeholder="Explain why this request cannot be processed" value={reason} />
+            </div>
+            <button className="btn-danger flex items-center gap-2 disabled:opacity-50" disabled={chequeBusy || !reason.trim()} onClick={() => processCheque("reject")} type="button">
+              <XCircle size={16} /> Reject cheque request
+            </button>
+          </div>
+        ) : null}
+      </ChequeDetails>
+    </div>
+  ) : null;
+
   return (
     <div className="shell">
       <aside className="sidebar">
@@ -115,10 +209,12 @@ export function AdminClient({
           ["overview", Shield, "Overview"],
           ["users", Users, "Users"],
           ["requests", CreditCard, "Requests"],
+          ["cheques", ScanLine, "Cheques"],
           ["methods", Settings, "Payment Methods"]
         ] as Array<[string, LucideIcon, string]>).map(([id, Icon, label]) => (
-          <button className={`nav-link w-full ${view === id ? "active" : ""}`} key={String(id)} onClick={() => setView(String(id))}>
+          <button className={`nav-link w-full ${view === id ? "active" : ""}`} key={String(id)} onClick={() => { setView(String(id)); setSelectedCheque(null); }}>
             <Icon size={18} /> {String(label)}
+            {id === "cheques" && pendingCheques.length ? <span className="ml-auto rounded-full bg-gold px-2 text-xs font-bold text-navy">{pendingCheques.length}</span> : null}
           </button>
         ))}
         <a className="nav-link mt-8" href="/dashboard">Back to dashboard</a>
@@ -137,13 +233,15 @@ export function AdminClient({
 
         {view === "overview" ? (
           <section className="space-y-6">
-            <div className="grid gap-5 md:grid-cols-4">
+            <div className="grid gap-5 md:grid-cols-5">
               <Stat label="Users" value={String(profiles.length)} />
               <Stat label="Active users" value={String(activeUsers.length)} />
               <Stat label="Pending requests" value={String(pending.length)} />
+              <Stat label="Pending cheques" value={String(pendingCheques.length)} />
               <Stat label="Credited" value={money(credited)} />
             </div>
-            <RequestsTable transactions={pending.slice(0, 8)} onApprove={(id) => post("/api/admin/transactions/approve", { transactionId: id })} onReject={(id) => post("/api/admin/transactions/reject", { transactionId: id })} />
+            {chequeReview}
+            <RequestsTable transactions={pending.slice(0, 8)} onApprove={(id) => post("/api/admin/transactions/approve", { transactionId: id })} onReject={(id) => post("/api/admin/transactions/reject", { transactionId: id })} onReviewCheque={openCheque} />
           </section>
         ) : null}
 
@@ -191,7 +289,26 @@ export function AdminClient({
         ) : null}
 
         {view === "requests" ? (
-          <RequestsTable transactions={transactions} onApprove={(id) => post("/api/admin/transactions/approve", { transactionId: id })} onReject={(id) => post("/api/admin/transactions/reject", { transactionId: id })} />
+          <section className="space-y-5">
+            {chequeReview}
+            <RequestsTable transactions={transactions} onApprove={(id) => post("/api/admin/transactions/approve", { transactionId: id })} onReject={(id) => post("/api/admin/transactions/reject", { transactionId: id })} onReviewCheque={openCheque} />
+          </section>
+        ) : null}
+
+        {view === "cheques" ? (
+          <section className="space-y-5">
+            <div>
+              <h2 className="font-head text-2xl font-bold">Cheque requests</h2>
+              <p className="mt-1 text-sm text-grey">Review scans, payees and delivery details. Approve only after verification or fulfilment.</p>
+            </div>
+            <div className="flex flex-wrap gap-2" aria-label="Filter cheque requests">
+              {([ ["all", "All"], ["pending", "Pending"], ["deposit", "Deposits"], ["withdrawal", "Withdrawals"] ] as const).map(([filter, label]) => (
+                <button aria-pressed={chequeFilter === filter} className={chequeFilter === filter ? "btn-primary" : "btn-secondary"} key={filter} onClick={() => { setChequeFilter(filter); setSelectedCheque(null); }} type="button">{label}</button>
+              ))}
+            </div>
+            {chequeReview}
+            <RequestsTable transactions={visibleCheques} onApprove={(id) => post("/api/admin/transactions/approve", { transactionId: id })} onReject={(id) => post("/api/admin/transactions/reject", { transactionId: id })} onReviewCheque={openCheque} />
+          </section>
         ) : null}
 
         {view === "methods" ? (
@@ -235,11 +352,13 @@ function Stat({ label, value }: { label: string; value: string }) {
 function RequestsTable({
   transactions,
   onApprove,
-  onReject
+  onReject,
+  onReviewCheque
 }: {
   transactions: Transaction[];
   onApprove: (id: string) => Promise<unknown>;
   onReject: (id: string) => Promise<unknown>;
+  onReviewCheque: (transaction: Transaction) => void;
 }) {
   const [loadingState, setLoadingState] = useState<{ id: string, action: 'approve' | 'reject' } | null>(null);
 
@@ -278,14 +397,18 @@ function RequestsTable({
                   <p className="font-bold">{txn.users?.full_name || "Unknown user"}</p>
                   <p className="text-xs text-grey">{txn.users?.account_id || ""}</p>
                 </td>
-                <td className="capitalize">{txn.type.replace('_', ' ')}</td>
+                <td className="capitalize">{isChequeTransaction(txn) ? `Cheque ${txn.type}` : txn.type.replaceAll('_', ' ')}</td>
                 <td>{money(txn.amount)}</td>
                 <td>{txn.method_label}</td>
                 <td className="max-w-[300px] break-words">{txn.description}</td>
                 <td><span className={`pill ${normalizeStatus(txn.status)}`}>{statusLabel(txn.status)}</span></td>
                 <td>{new Date(txn.created_at).toLocaleDateString()}</td>
                 <td>
-                  {normalizeStatus(txn.status) === "pending" ? (
+                  {isChequeTransaction(txn) ? (
+                    <button className="btn-secondary px-3 py-2 text-xs text-teal2" onClick={() => onReviewCheque(txn)} type="button">
+                      <ScanLine size={14} /> Review cheque
+                    </button>
+                  ) : normalizeStatus(txn.status) === "pending" ? (
                     <div className="flex flex-wrap gap-2">
                       <button 
                         className="btn-secondary px-3 py-2 text-xs text-teal2 disabled:opacity-50" 

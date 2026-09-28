@@ -2,11 +2,12 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getAdminUser } from "@/lib/auth";
 import { createSupabaseAdminClient } from "@/lib/supabase-server";
-import { describeDbError, finalizeTransaction, isStatusConstraintError } from "@/lib/transactions";
+import { describeDbError, finalizeTransaction, isStatusConstraintError, missingColumn } from "@/lib/transactions";
+import { CHEQUE_METHOD_KEY } from "@/lib/cheques";
 
 const schema = z.object({
   transactionId: z.string().uuid(),
-  reason: z.string().optional()
+  reason: z.string().trim().max(500).optional()
 });
 
 export async function POST(request: Request) {
@@ -37,17 +38,24 @@ export async function POST(request: Request) {
       );
     }
 
+    const isCheque = txn.method_key === CHEQUE_METHOD_KEY;
+    if (isCheque && !reason) {
+      return NextResponse.json({ error: "Enter a reason before rejecting a cheque request." }, { status: 400 });
+    }
+
     const { data, error, legacyStatus } = await finalizeTransaction(supabase, transactionId, {
       status: "rejected",
-      admin_note: reason?.trim() || null,
+      admin_note: reason || null,
       completed_at: new Date().toISOString()
-    });
+    }, isCheque ? { requiredColumns: ["admin_note"] } : {});
 
     if (error) {
       console.error("Reject transaction failed:", error);
       const message = isStatusConstraintError(error)
         ? "Your database still uses the old transaction status values, so it refuses to store 'rejected'. Run supabase/fix_transactions_status.sql in the Supabase SQL editor, then try again."
-        : `Could not reject this transaction: ${describeDbError(error)}`;
+        : missingColumn(error) && isCheque
+          ? "Cheque reviews need database setup. Apply supabase/add_cheques.sql."
+          : `Could not reject this transaction: ${describeDbError(error)}`;
       return NextResponse.json({ error: message, detail: error.message }, { status: 400 });
     }
 

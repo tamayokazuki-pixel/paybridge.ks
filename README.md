@@ -1,6 +1,6 @@
 # paybridge.ks Next.js App
 
-This project converts the original static HTML banking demo into a full Next.js application for paybridge.ks with Supabase authentication, Google sign-in, protected dashboard pages, deposit requests, admin approvals, payment-method settings, and persistent database records.
+This project converts the original static HTML banking demo into a full Next.js application for paybridge.ks with Supabase authentication, Google sign-in, protected dashboard pages, deposit and withdrawal requests (including cheques), admin approvals, payment-method settings, and persistent database records. The root-level `*.html` files are archived localStorage demos; the live website is under `app/`.
 
 ## Stack
 
@@ -14,8 +14,17 @@ This project converts the original static HTML banking demo into a full Next.js 
 ## Setup
 
 1. Create a Supabase project.
-2. In Supabase SQL Editor, run `supabase/schema.sql`.
-3. Copy `.env.example` to `.env` (or `.env.local` if you prefer that naming) and fill in the Supabase values.
+2. In Supabase SQL Editor, run `supabase/schema.sql` for a **new** database. For an existing database, run `supabase/add_cheques.sql` instead (see below).
+3. Create `.env.local` with the Supabase values (never commit this file):
+
+```dotenv
+NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key
+```
+
+Only the server should have access to the service role key.
+
 4. In Supabase Auth providers, enable Google and email OTP sign-in.
 5. Add this callback URL in Supabase Auth settings:
 
@@ -39,6 +48,16 @@ npm run dev
 ```
 
 Then open `http://localhost:3000`.
+
+## Cheque requests
+
+- Customers use **Dashboard → Cheques** (also linked from Add Money and Withdraw). A deposit requires a cheque number, issuing bank, payer, date, amount (min $50), and **front and endorsed-back images** (JPEG/PNG/WebP, max 5 MB each). A withdrawal requires the amount, payee, and full mailing address; submitting it reserves the funds immediately.
+- Cheque requests appear in **Admin → Cheques**, as well as the normal Requests queue. Admins can inspect the private scans or mailing details, filter requests, and approve/reject them. A cheque deposit only credits the account after manual verification and approval. A withdrawal approval requires a cheque/dispatch reference; a rejection requires a reason and releases the hold. Customers can view their own request details and rejection reasons from Transactions.
+- Cheques are `deposit`/`withdrawal` rows in the **same ledger** as other methods, with `method_key = 'cheque'` and `cheque_details` metadata. A database trigger serializes withdrawal holds across all methods so simultaneous requests cannot reserve the same funds twice. The scans live in a **private Supabase Storage bucket**, not the database or a public URL. Only the owner or a verified admin can request 5-minute signed links; audit any pre-existing broad `storage.objects` policies before using real scans. Duplicate pending/completed deposits for the same user's bank and cheque number are blocked by a database index.
+- **Existing Supabase projects must run `supabase/add_cheques.sql`** in the SQL Editor before using the new UI. This idempotent migration adds cheque metadata and the private bucket, and removes older browser-write policies that allowed forging completed deposits or changing one's role/status. New installations get the same setup via `supabase/schema.sql`. If rejection fails due to an old status CHECK constraint, also run `supabase/fix_transactions_status.sql`.
+- Processing is **manual**: this demo does not clear/verify a cheque with a bank, print or mail cheques, or reconcile delivery. Only approve a deposit after independently confirming cleared funds, and only approve a withdrawal after arranging the cheque. Check your host's multipart request-size limit for two 5 MB images, and apply your organization's retention policy to stored scans before using real customer data.
+
+Run automated checks with `npm test`, `npm run lint`, and `npm run build` (builds require the three Supabase environment variables above).
 
 ## Troubleshooting
 
