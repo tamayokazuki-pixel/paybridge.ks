@@ -1,14 +1,20 @@
 import type { Metadata } from "next";
-import { DM_Sans, Playfair_Display } from "next/font/google";
+import localFont from "next/font/local";
 import "./globals.css";
 
-const dmSans = DM_Sans({
-  subsets: ["latin"],
+// Self-host the same font families so builds do not depend on Google Fonts
+// being reachable (licences are alongside the font files in app/fonts/).
+const dmSans = localFont({
+  src: "./fonts/dm-sans-latin-variable.woff2",
+  weight: "100 1000",
+  display: "swap",
   variable: "--font-dm-sans"
 });
 
-const playfair = Playfair_Display({
-  subsets: ["latin"],
+const playfair = localFont({
+  src: "./fonts/playfair-display-latin-variable.woff2",
+  weight: "400 900",
+  display: "swap",
   variable: "--font-playfair"
 });
 

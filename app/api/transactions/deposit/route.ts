@@ -3,6 +3,7 @@ import { z } from "zod";
 import { getCurrentUser } from "@/lib/auth";
 import { createSupabaseAdminClient } from "@/lib/supabase-server";
 import { describeDbError, insertTransaction } from "@/lib/transactions";
+import { isActiveAccount } from "@/lib/cheque-server";
 
 const depositSchema = z.object({
   amount: z.number().min(50, "Minimum deposit amount is $50"),
@@ -21,13 +22,17 @@ export async function POST(request: Request) {
 
   try {
     const supabase = createSupabaseAdminClient();
-    const { data: method } = await supabase
+    if (!await isActiveAccount(supabase, user.id)) {
+      return NextResponse.json({ error: "An active account is required to deposit." }, { status: 403 });
+    }
+    const { data: method, error: methodError } = await supabase
       .from("payment_methods")
       .select("*")
       .eq("key", body.paymentMethodKey)
       .eq("is_active", true)
       .maybeSingle();
 
+    if (methodError) throw methodError;
     if (!method) return NextResponse.json({ error: "Payment method is unavailable." }, { status: 404 });
 
     const { data, error } = await insertTransaction(supabase, {

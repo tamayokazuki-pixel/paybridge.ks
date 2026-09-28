@@ -19,11 +19,11 @@ async function getAdminProfile(userId: string) {
   const admin = createSupabaseAdminClient();
   const { data: profile } = await admin
     .from("users")
-    .select("role,is_verified")
+    .select("role,is_verified,status")
     .eq("id", userId)
     .maybeSingle();
 
-  if (!profile || profile.role !== "admin" || !profile.is_verified) return null;
+  if (!profile || profile.role !== "admin" || !profile.is_verified || profile.status !== "active") return null;
   return profile;
 }
 

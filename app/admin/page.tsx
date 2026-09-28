@@ -2,6 +2,7 @@ import { AdminClient } from "@/components/AdminClient";
 import { requireAdmin } from "@/lib/auth";
 import { createSupabaseAdminClient } from "@/lib/supabase-server";
 import { normalizeStatus, type TransactionStatus } from "@/lib/transaction-status";
+import { availableBalance } from "@/lib/balance";
 
 export default async function AdminPage() {
   await requireAdmin();
@@ -23,19 +24,7 @@ export default async function AdminPage() {
     };
   });
 
-  const balanceFor = (userId: string) =>
-    transactions
-      .filter((txn) => txn.user_id === userId)
-      .reduce((sum, txn) => {
-        if (txn.status === "completed" && (txn.type === "deposit" || txn.type === "admin_adjustment")) {
-          sum += Number(txn.amount);
-        } else if (txn.type === "withdrawal" || txn.type === "transfer" || txn.type === "withdraw") {
-          if (txn.status === "completed" || txn.status === "pending") {
-            sum -= Number(txn.amount);
-          }
-        }
-        return sum;
-      }, 0);
+  const balanceFor = (userId: string) => availableBalance(transactions.filter((txn) => txn.user_id === userId));
 
   const usersWithBalance = (users || []).map((user) => ({ ...user, balance: balanceFor(user.id) }));
 

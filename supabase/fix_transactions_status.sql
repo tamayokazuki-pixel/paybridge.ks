@@ -86,6 +86,8 @@ begin
     from pg_constraint con
     where con.conrelid = 'public.transactions'::regclass
       and con.contype = 'c'
+      -- Keep the separate cheque metadata constraint (it also mentions type).
+      and con.conname <> 'transactions_cheque_details_check'
       and (
         pg_get_constraintdef(con.oid) ilike '%status%'
         or pg_get_constraintdef(con.oid) ilike '%type%'

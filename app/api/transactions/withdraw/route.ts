@@ -1,14 +1,15 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getCurrentUser } from "@/lib/auth";
+import { availableBalance } from "@/lib/balance";
+import { isActiveAccount } from "@/lib/cheque-server";
 import { createSupabaseAdminClient } from "@/lib/supabase-server";
 import { describeDbError, insertTransaction } from "@/lib/transactions";
-import { normalizeStatus } from "@/lib/transaction-status";
 
 const withdrawSchema = z.object({
-  amount: z.number().min(50, "Minimum withdrawal amount is $50"),
-  methodLabel: z.string().min(1),
-  destination: z.string().min(1)
+  amount: z.number().finite().min(50, "Minimum withdrawal amount is $50"),
+  paymentMethodKey: z.string().min(1),
+  destination: z.string().trim().min(1).max(500)
 });
 
 export async function POST(request: Request) {
@@ -23,39 +24,29 @@ export async function POST(request: Request) {
 
   try {
     const supabase = createSupabaseAdminClient();
+    if (!await isActiveAccount(supabase, user.id)) {
+      return NextResponse.json({ error: "An active account is required to withdraw." }, { status: 403 });
+    }
+    const { data: method, error: methodError } = await supabase
+      .from("payment_methods").select("key,label").eq("key", body.paymentMethodKey).eq("is_active", true).maybeSingle();
+    if (methodError) throw methodError;
+    if (!method) return NextResponse.json({ error: "Payment method is unavailable." }, { status: 404 });
 
-    // Calculate available balance: completed deposits minus everything already
-    // committed (pending or completed withdrawals/transfers).
-    const { data: ledgerBalanceData } = await supabase
-      .from("transactions")
-      .select("amount,type,status")
-      .eq("user_id", user.id);
-
-    const availableBalance = (ledgerBalanceData || []).reduce((sum, txn) => {
-      const status = normalizeStatus(txn.status);
-      if (status === "completed" && (txn.type === "deposit" || txn.type === "admin_adjustment")) {
-        sum += Number(txn.amount);
-      } else if (txn.type === "withdrawal" || txn.type === "transfer" || txn.type === "withdraw") {
-        if (status === "completed" || status === "pending") {
-          sum -= Number(txn.amount);
-        }
-      }
-      return sum;
-    }, 0);
-
-    if (body.amount > availableBalance) {
+    const { data: ledger, error: ledgerError } = await supabase
+      .from("transactions").select("amount,type,status").eq("user_id", user.id);
+    if (ledgerError) throw ledgerError;
+    if (body.amount > availableBalance(ledger || [])) {
       return NextResponse.json({ error: "Insufficient available balance." }, { status: 400 });
     }
 
     const { data, error } = await insertTransaction(supabase, {
       user_id: user.id,
-      // Kept for databases that still have the legacy profiles foreign key;
-      // dropped automatically when the column does not exist.
       profile_id: user.id,
       type: "withdrawal",
       status: "pending",
       amount: body.amount,
-      method_label: body.methodLabel,
+      method_key: method.key,
+      method_label: method.label,
       description: `Withdrawal to: ${body.destination}`
     });
 
@@ -67,9 +58,6 @@ export async function POST(request: Request) {
     return NextResponse.json({ transaction: data });
   } catch (error) {
     console.error("Withdrawal request crashed:", error);
-    return NextResponse.json(
-      { error: error instanceof Error ? error.message : "Unexpected server error." },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: "Could not submit withdrawal request. Please try again." }, { status: 500 });
   }
 }

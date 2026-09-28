@@ -36,7 +36,7 @@ export async function POST(request: Request) {
     .upsert(
       {
         id: user.id,
-        email: body.email,
+        email: user.email || body.email,
         full_name: `${body.firstName} ${body.lastName}`.trim(),
         account_id: accountId,
         phone: body.phone || null,
@@ -45,10 +45,9 @@ export async function POST(request: Request) {
         username: body.username,
         account_type: body.accountType,
         currency: body.currency,
-        marketing: body.marketing || false,
-        is_verified: false,
-        role: "user",
-        status: "active"
+        marketing: body.marketing || false
+        // role, verification and suspension status are database-managed; a
+        // profile edit must never reactivate an account or grant admin access.
       },
       { onConflict: "id" }
     )

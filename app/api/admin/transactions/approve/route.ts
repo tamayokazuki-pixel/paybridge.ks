@@ -2,11 +2,12 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getAdminUser } from "@/lib/auth";
 import { createSupabaseAdminClient } from "@/lib/supabase-server";
-import { describeDbError, finalizeTransaction } from "@/lib/transactions";
+import { describeDbError, finalizeTransaction, missingColumn } from "@/lib/transactions";
+import { CHEQUE_METHOD_KEY, chequeDetailsSchema } from "@/lib/cheques";
 
 const schema = z.object({
   transactionId: z.string().uuid(),
-  reference: z.string().optional()
+  reference: z.string().trim().max(100).optional()
 });
 
 export async function POST(request: Request) {
@@ -37,16 +38,29 @@ export async function POST(request: Request) {
       );
     }
 
+    const isCheque = txn.method_key === CHEQUE_METHOD_KEY;
+    if (isCheque) {
+      const details = chequeDetailsSchema.safeParse(txn.cheque_details);
+      if (!details.success || details.data.kind !== txn.type) {
+        return NextResponse.json({ error: "This cheque is missing required details. Do not approve it." }, { status: 400 });
+      }
+      if (txn.type === "withdrawal" && !reference) {
+        return NextResponse.json({ error: "Enter a cheque number or dispatch reference before approving." }, { status: 400 });
+      }
+    }
+
     const { data, error, legacyStatus } = await finalizeTransaction(supabase, transactionId, {
       status: "completed",
-      reference: reference?.trim() || null,
+      reference: reference || null,
       completed_at: new Date().toISOString()
-    });
+    }, isCheque ? { requiredColumns: ["reference"] } : {});
 
     if (error) {
       console.error("Approve transaction failed:", error);
       return NextResponse.json(
-        { error: `Could not approve this transaction: ${describeDbError(error)}` },
+        { error: missingColumn(error) && isCheque
+          ? "Cheque approvals need database setup. Apply supabase/add_cheques.sql."
+          : `Could not approve this transaction: ${describeDbError(error)}` },
         { status: 400 }
       );
     }
