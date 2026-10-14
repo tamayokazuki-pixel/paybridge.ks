@@ -1,12 +1,14 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Copy, CreditCard, Landmark, LogOut, ScanLine, Send, UserRound, WalletCards, type LucideIcon } from "lucide-react";
+import { Copy, CreditCard, Landmark, LogOut, ScanLine, Send, TrendingUp, UserRound, WalletCards, type LucideIcon } from "lucide-react";
 import { useRouter } from "next/navigation";
 import { money, initials } from "@/lib/format";
 import { ChequeDetails } from "@/components/ChequeDetails";
 import { ChequePanel } from "@/components/ChequePanel";
+import { StocksPanel } from "@/components/StocksPanel";
 import { isChequeTransaction } from "@/lib/cheques";
+import type { StockQuote, StockTrade } from "@/lib/stocks";
 
 type Profile = {
   id: string;
@@ -47,11 +49,17 @@ type Method = {
 export function DashboardClient({
   profile,
   transactions,
-  paymentMethods
+  paymentMethods,
+  stockQuotes,
+  stockTrades,
+  stockTradingReady
 }: {
   profile: Profile;
   transactions: Transaction[];
   paymentMethods: Method[];
+  stockQuotes: StockQuote[];
+  stockTrades: StockTrade[];
+  stockTradingReady: boolean;
 }) {
   const router = useRouter();
   const [view, setView] = useState("overview");
@@ -138,6 +146,7 @@ export function DashboardClient({
         </div>
         {([
           ["overview", WalletCards, "Overview"],
+          ["stocks", TrendingUp, "Stocks"],
           ["deposit", CreditCard, "Add Money"],
           ["withdraw", Landmark, "Withdraw"],
           ["cheques", ScanLine, "Cheques"],
@@ -168,7 +177,7 @@ export function DashboardClient({
 
         {profile.status === "suspended" ? (
           <div className="mb-5 rounded-lg border border-red-200 bg-red-50 p-3 text-sm font-bold text-red-700" role="alert">
-            Your account is suspended. New deposit and withdrawal requests are unavailable; please contact support.
+            Your account is suspended. New deposit, withdrawal, and stock purchases are unavailable; please contact support.
           </div>
         ) : null}
         {notice ? <div className="mb-5 rounded-lg border border-teal/20 bg-teal/10 p-3 text-sm font-bold text-teal2">{notice}</div> : null}
@@ -187,6 +196,16 @@ export function DashboardClient({
             </div>
             <TransactionList transactions={transactions.slice(0, 5)} />
           </section>
+        ) : null}
+
+        {view === "stocks" ? (
+          <StocksPanel
+            availableBalance={profile.balance}
+            accountActive={profile.status === "active"}
+            quotes={stockQuotes}
+            trades={stockTrades}
+            tradingReady={stockTradingReady}
+          />
         ) : null}
 
         {view === "deposit" ? (
@@ -317,7 +336,9 @@ function TransactionList({ transactions }: { transactions: Transaction[] }) {
                   <tr key={txn.id}>
                     <td className="font-bold">{txn.description}</td>
                     <td>{txn.method_label || "Internal"}</td>
-                    <td>{money(txn.amount)}</td>
+                    <td className={txn.method_key === "stocks" ? "font-semibold text-red-700" : undefined}>
+                      {txn.method_key === "stocks" ? `−${money(txn.amount)}` : money(txn.amount)}
+                    </td>
                     <td><span className={`pill ${txn.status}`}>{txn.status}</span></td>
                     <td>{new Date(txn.created_at).toLocaleDateString()}</td>
                     <td>
