@@ -14,25 +14,41 @@ export default async function DashboardPage() {
 
   const supabase = createSupabaseAdminClient();
 
-  const [{ data: transactions }, { data: paymentMethods }] = await Promise.all([
+  const [
+    { data: transactions },
+    { data: paymentMethods },
+    { data: stockQuotes, error: stockQuotesError },
+    { data: stockTrades, error: stockTradesError }
+  ] = await Promise.all([
     supabase
       .from("transactions")
       .select("*")
       .eq("user_id", profile.id)
       .order("created_at", { ascending: false }),
-    supabase.from("payment_methods").select("*").eq("is_active", true).order("label")
+    supabase.from("payment_methods").select("*").eq("is_active", true).order("label"),
+    supabase.from("stock_quotes").select("*").eq("is_active", true).order("symbol"),
+    supabase
+      .from("stock_trades")
+      .select("id,symbol,company_name,shares,price_per_share,total_amount,created_at")
+      .eq("user_id", profile.id)
+      .order("created_at", { ascending: false })
   ]);
 
   // Older rows can still carry the legacy status values ('failed', 'approved').
   const ledger = (transactions || []).map((txn) => ({ ...txn, status: normalizeStatus(txn.status) }));
 
-  const ledgerBalance = availableBalance(ledger);
+  if (stockQuotesError || stockTradesError) {
+    console.error("Stock trading tables are unavailable. Apply supabase/add_stock_trading.sql.", stockQuotesError || stockTradesError);
+  }
 
   return (
     <DashboardClient
-      profile={{ ...profile, balance: ledgerBalance }}
+      profile={{ ...profile, balance: availableBalance(ledger) }}
       transactions={ledger}
       paymentMethods={paymentMethods || []}
+      stockQuotes={stockQuotes || []}
+      stockTrades={stockTrades || []}
+      stockTradingReady={!stockQuotesError && !stockTradesError}
     />
   );
 }

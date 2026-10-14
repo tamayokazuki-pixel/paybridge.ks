@@ -1,6 +1,6 @@
 # paybridge.ks Next.js App
 
-This project converts the original static HTML banking demo into a full Next.js application for paybridge.ks with Supabase authentication, Google sign-in, protected dashboard pages, deposit and withdrawal requests (including cheques), admin approvals, payment-method settings, and persistent database records. The root-level `*.html` files are archived localStorage demos; the live website is under `app/`.
+This project converts the original static HTML banking demo into a full Next.js application for paybridge.ks with Supabase authentication, Google sign-in, protected dashboard pages, deposit and withdrawal requests (including cheques), simulated stock trading, admin approvals, payment-method settings, and persistent database records. The root-level `*.html` files are archived localStorage demos; the live website is under `app/`.
 
 ## Stack
 
@@ -14,7 +14,7 @@ This project converts the original static HTML banking demo into a full Next.js 
 ## Setup
 
 1. Create a Supabase project.
-2. In Supabase SQL Editor, run `supabase/schema.sql` for a **new** database. For an existing database, run `supabase/add_cheques.sql` instead (see below).
+2. In Supabase SQL Editor, run `supabase/schema.sql` for a **new** database. For an existing project, run `supabase/add_stock_trading.sql` to enable Stocks; also run `supabase/add_cheques.sql` if cheque support has not already been installed.
 3. Create `.env.local` with the Supabase values (never commit this file):
 
 ```dotenv
@@ -56,6 +56,13 @@ Then open `http://localhost:3000`.
 - Cheques are `deposit`/`withdrawal` rows in the **same ledger** as other methods, with `method_key = 'cheque'` and `cheque_details` metadata. A database trigger serializes withdrawal holds across all methods so simultaneous requests cannot reserve the same funds twice. The scans live in a **private Supabase Storage bucket**, not the database or a public URL. Only the owner or a verified admin can request 5-minute signed links; audit any pre-existing broad `storage.objects` policies before using real scans. Duplicate pending/completed deposits for the same user's bank and cheque number are blocked by a database index.
 - **Existing Supabase projects must run `supabase/add_cheques.sql`** in the SQL Editor before using the new UI. This idempotent migration adds cheque metadata and the private bucket, and removes older browser-write policies that allowed forging completed deposits or changing one's role/status. New installations get the same setup via `supabase/schema.sql`. If rejection fails due to an old status CHECK constraint, also run `supabase/fix_transactions_status.sql`.
 - Processing is **manual**: this demo does not clear/verify a cheque with a bank, print or mail cheques, or reconcile delivery. Only approve a deposit after independently confirming cleared funds, and only approve a withdrawal after arranging the cheque. Check your host's multipart request-size limit for two 5 MB images, and apply your organization's retention policy to stored scans before using real customer data.
+
+## Stock trading
+
+- Customers open **Dashboard → Stocks** to browse Apple (AAPL), Trump Media & Technology Group (DJT), Microsoft, NVIDIA, Amazon, Tesla, Alphabet, Meta, AMD, and JPMorgan. They can buy up to four-decimal fractional shares using their available account balance. Each purchase is recorded as a stock trade and a completed cash-ledger debit.
+- Purchases use a server-only database function that locks the account while it checks the balance and records the debit and shares together. A client cannot supply its own quote, order total, or user ID. The `stock_trades` table is readable only by its owner; browser-side writes and direct calls to the purchase function are disabled.
+- **This is simulated paper trading, not a brokerage integration.** The seeded prices are illustrative demo reference prices, not live market quotes. Orders are not sent to a broker, do not represent real share ownership, and cannot be sold or withdrawn. Do not use this feature for real-money investing.
+- New databases get the catalog, trade ledger, row-level security, and purchase function from `supabase/schema.sql`. Existing projects must run `supabase/add_stock_trading.sql` in Supabase SQL Editor before using the Stocks screen. Re-running that migration does not reset existing quote values.
 
 Run automated checks with `npm test`, `npm run lint`, and `npm run build` (builds require the three Supabase environment variables above).
 
