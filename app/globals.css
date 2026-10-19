@@ -222,6 +222,31 @@ td {
   color: var(--red);
 }
 
+/* Scrolling market ticker tape on the Stocks screen. */
+@keyframes ticker-scroll {
+  from {
+    transform: translateX(0);
+  }
+
+  to {
+    transform: translateX(-50%);
+  }
+}
+
+.ticker-track {
+  animation: ticker-scroll 55s linear infinite;
+}
+
+.ticker-track:hover {
+  animation-play-state: paused;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .ticker-track {
+    animation: none;
+  }
+}
+
 @media (max-width: 850px) {
   .shell {
     grid-template-columns: 1fr;

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getCurrentUser } from "@/lib/auth";
 import { isActiveAccount } from "@/lib/cheque-server";
+import { refreshStoredQuote } from "@/lib/market-data";
 import { createSupabaseAdminClient } from "@/lib/supabase-server";
 
 type RpcError = { code?: string | null; message?: string | null; details?: string | null };
@@ -54,8 +55,13 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "An active account is required to buy shares." }, { status: 403 });
     }
 
+    // Refresh the stored quote from the delayed market feed first so the
+    // order executes at the current price. Non-fatal if the feed is down:
+    // the previously stored quote is then used.
+    await refreshStoredQuote(supabase, parsed.data.symbol);
+
     // The API accepts only a ticker and share quantity. The database function
-    // reads the current server-side demo quote and atomically checks/debits the
+    // reads the current server-side quote and atomically checks/debits the
     // user's ledger, so a browser cannot choose its own price or spend twice.
     const { data: order, error } = await supabase.rpc("execute_stock_purchase", {
       p_user_id: user.id,
