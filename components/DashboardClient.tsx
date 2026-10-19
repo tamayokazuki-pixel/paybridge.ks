@@ -8,7 +8,7 @@ import { ChequeDetails } from "@/components/ChequeDetails";
 import { ChequePanel } from "@/components/ChequePanel";
 import { StocksPanel } from "@/components/StocksPanel";
 import { isChequeTransaction } from "@/lib/cheques";
-import type { StockQuote, StockTrade } from "@/lib/stocks";
+import { aggregateStockTrades, type StockQuote, type StockTrade } from "@/lib/stocks";
 
 type Profile = {
   id: string;
@@ -52,7 +52,8 @@ export function DashboardClient({
   paymentMethods,
   stockQuotes,
   stockTrades,
-  stockTradingReady
+  stockTradingReady,
+  stockSellReady = true
 }: {
   profile: Profile;
   transactions: Transaction[];
@@ -60,6 +61,7 @@ export function DashboardClient({
   stockQuotes: StockQuote[];
   stockTrades: StockTrade[];
   stockTradingReady: boolean;
+  stockSellReady?: boolean;
 }) {
   const router = useRouter();
   const [view, setView] = useState("overview");
@@ -77,10 +79,19 @@ export function DashboardClient({
       .filter(
         (txn) =>
           txn.status === "completed" &&
-          (txn.type === "deposit" || txn.type === "admin_adjustment")
+          (txn.type === "deposit" || txn.type === "admin_adjustment") &&
+          // Stock-sale proceeds credit the ledger as deposits but are not
+          // money the customer paid in.
+          txn.method_key !== "stocks"
       )
       .reduce((sum, txn) => sum + Number(txn.amount), 0),
     [transactions]
+  );
+  const stockPortfolioValue = useMemo(
+    () => aggregateStockTrades(stockTrades, stockQuotes)
+      .filter((holding) => holding.shares > 0)
+      .reduce((sum, holding) => sum + holding.reference_value, 0),
+    [stockTrades, stockQuotes]
   );
   const pendingDeposits = transactions.filter((txn) => txn.status === "pending" && txn.type === "deposit").length;
 
@@ -177,7 +188,7 @@ export function DashboardClient({
 
         {profile.status === "suspended" ? (
           <div className="mb-5 rounded-lg border border-red-200 bg-red-50 p-3 text-sm font-bold text-red-700" role="alert">
-            Your account is suspended. New deposit, withdrawal, and stock purchases are unavailable; please contact support.
+            Your account is suspended. New deposit, withdrawal, and stock trades are unavailable; please contact support.
           </div>
         ) : null}
         {notice ? <div className="mb-5 rounded-lg border border-teal/20 bg-teal/10 p-3 text-sm font-bold text-teal2">{notice}</div> : null}
@@ -188,9 +199,13 @@ export function DashboardClient({
               <p className="text-xs uppercase tracking-[.12em] text-white/40">Available balance</p>
               <p className="mt-2 font-head text-5xl font-black">{money(profile.balance)}</p>
               <p className="mt-2 text-white/45">{profile.currency}</p>
+              <button className="btn-primary mt-5" onClick={() => setView("stocks")} type="button">
+                <TrendingUp size={17} /> Trade stocks — Apple, Trump Media, Barron&apos;s &amp; more
+              </button>
             </div>
-            <div className="grid gap-5 md:grid-cols-3">
+            <div className="grid gap-5 md:grid-cols-4">
               <Stat label="Total deposited" value={money(completedDeposits)} icon={<Landmark />} />
+              <Stat label="Stock portfolio" value={money(stockPortfolioValue)} icon={<TrendingUp />} />
               <Stat label="Pending deposits" value={String(pendingDeposits)} icon={<CreditCard />} />
               <Stat label="Transactions" value={String(transactions.length)} icon={<Send />} />
             </div>
@@ -205,6 +220,7 @@ export function DashboardClient({
             quotes={stockQuotes}
             trades={stockTrades}
             tradingReady={stockTradingReady}
+            sellReady={stockSellReady}
           />
         ) : null}
 
@@ -336,8 +352,14 @@ function TransactionList({ transactions }: { transactions: Transaction[] }) {
                   <tr key={txn.id}>
                     <td className="font-bold">{txn.description}</td>
                     <td>{txn.method_label || "Internal"}</td>
-                    <td className={txn.method_key === "stocks" ? "font-semibold text-red-700" : undefined}>
-                      {txn.method_key === "stocks" ? `−${money(txn.amount)}` : money(txn.amount)}
+                    <td className={
+                      txn.method_key === "stocks"
+                        ? `font-semibold ${txn.type === "deposit" ? "text-teal2" : "text-red-700"}`
+                        : undefined
+                    }>
+                      {txn.method_key === "stocks"
+                        ? `${txn.type === "deposit" ? "+" : "−"}${money(txn.amount)}`
+                        : money(txn.amount)}
                     </td>
                     <td><span className={`pill ${txn.status}`}>{txn.status}</span></td>
                     <td>{new Date(txn.created_at).toLocaleDateString()}</td>

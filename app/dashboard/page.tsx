@@ -18,7 +18,7 @@ export default async function DashboardPage() {
     { data: transactions },
     { data: paymentMethods },
     { data: stockQuotes, error: stockQuotesError },
-    { data: stockTrades, error: stockTradesError }
+    tradesWithSide
   ] = await Promise.all([
     supabase
       .from("transactions")
@@ -29,10 +29,26 @@ export default async function DashboardPage() {
     supabase.from("stock_quotes").select("*").eq("is_active", true).order("symbol"),
     supabase
       .from("stock_trades")
-      .select("id,symbol,company_name,shares,price_per_share,total_amount,created_at")
+      .select("id,symbol,company_name,side,shares,price_per_share,total_amount,created_at")
       .eq("user_id", profile.id)
       .order("created_at", { ascending: false })
   ]);
+
+  // Databases that applied the buy-only migration have no `side` column yet.
+  // Fall back to the old column list there: buying and the live charts keep
+  // working, and the UI explains that selling needs the updated script.
+  let stockTrades = tradesWithSide.data;
+  let stockTradesError = tradesWithSide.error;
+  const sellReady = !tradesWithSide.error;
+  if (tradesWithSide.error) {
+    const legacy = await supabase
+      .from("stock_trades")
+      .select("id,symbol,company_name,shares,price_per_share,total_amount,created_at")
+      .eq("user_id", profile.id)
+      .order("created_at", { ascending: false });
+    stockTrades = legacy.data?.map((trade) => ({ ...trade, side: "buy" })) ?? null;
+    stockTradesError = legacy.error;
+  }
 
   // Older rows can still carry the legacy status values ('failed', 'approved').
   const ledger = (transactions || []).map((txn) => ({ ...txn, status: normalizeStatus(txn.status) }));
@@ -49,6 +65,7 @@ export default async function DashboardPage() {
       stockQuotes={stockQuotes || []}
       stockTrades={stockTrades || []}
       stockTradingReady={!stockQuotesError && !stockTradesError}
+      stockSellReady={sellReady && !stockTradesError}
     />
   );
 }
