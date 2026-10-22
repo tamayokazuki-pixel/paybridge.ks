@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowRight, CircleAlert, ShieldCheck, TrendingUp } from "lucide-react";
+import { ArrowRight, CircleAlert, TrendingUp } from "lucide-react";
 import { aggregateStockTrades, formatShares, type StockQuote, type StockTrade } from "@/lib/stocks";
 import { money } from "@/lib/format";
 
@@ -100,11 +100,6 @@ export function StocksPanel({
             <p className="text-xs text-white/50">Demo quotes · simulated only</p>
           </div>
         </div>
-      </div>
-
-      <div className="flex gap-3 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm leading-6 text-amber-900" role="note">
-        <ShieldCheck className="mt-0.5 shrink-0" size={19} />
-        <p><strong>Demo only:</strong> these are sample reference prices, not live market data. Orders are simulated and are not sent to a broker; this feature does not execute real stock trades.</p>
       </div>
 
       {accountActive ? null : (
