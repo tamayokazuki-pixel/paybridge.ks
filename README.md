@@ -15,7 +15,7 @@ This project converts the original static HTML banking demo into a full Next.js 
 
 1. Create a Supabase project.
 2. In Supabase SQL Editor, run `supabase/schema.sql` for a **new** database. For an existing project, run `supabase/add_stock_trading.sql` to enable Stocks; also run `supabase/add_cheques.sql` if cheque support has not already been installed.
-3. Create `.env.local` with the Supabase values (never commit this file):
+3. Create `.env.local` with the Supabase values (never commit this file; see `.env.example`):
 
 ```dotenv
 NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
@@ -49,6 +49,20 @@ npm run dev
 
 Then open `http://localhost:3000`.
 
+## Deploying on Vercel
+
+Vercel does **not** see your local `.env.local` (it is git-ignored). Add the
+same three variables in **Vercel → Project Settings → Environment
+Variables** — `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`,
+and `SUPABASE_SERVICE_ROLE_KEY` — for Production (and Preview if you use
+preview deployments), then redeploy. `NEXT_PUBLIC_*` values are inlined
+into the browser bundle at **build time**, so adding or changing them only
+takes effect in a new build; use **Deployments → ⋯ → Redeploy** after
+setting them. Missing values make sign-in fail with "Supabase is not
+configured" and break server routes, so set all three before the first
+deploy. Also add your Vercel domain's callback
+(`https://<your-domain>/auth/callback`) to Supabase Auth's redirect URLs.
+
 ## Cheque requests
 
 - Customers use **Dashboard → Cheques** (also linked from Add Money and Withdraw). A deposit requires a cheque number, issuing bank, payer, date, amount (min $50), and **front and endorsed-back images** (JPEG/PNG/WebP, max 5 MB each). A withdrawal requires the amount, payee, and full mailing address; submitting it reserves the funds immediately.
@@ -64,7 +78,7 @@ Then open `http://localhost:3000`.
 - **This is simulated paper trading, not a brokerage integration.** The seeded prices are illustrative demo reference prices, not live market quotes. Orders are not sent to a broker, do not represent real share ownership, and cannot be sold or withdrawn. Do not use this feature for real-money investing.
 - New databases get the catalog, trade ledger, row-level security, and purchase function from `supabase/schema.sql`. Existing projects must run `supabase/add_stock_trading.sql` in Supabase SQL Editor before using the Stocks screen. Re-running that migration does not reset existing quote values.
 
-Run automated checks with `npm test`, `npm run lint`, and `npm run build` (builds require the three Supabase environment variables above).
+Run automated checks with `npm test`, `npm run lint`, and `npm run build`. The build itself no longer needs the Supabase variables (the browser client is created lazily, never while pages are pre-rendered), but the running app needs all three — see "Deploying on Vercel" above.
 
 ## Troubleshooting
 

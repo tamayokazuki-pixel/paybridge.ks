@@ -5,7 +5,6 @@ import { Chrome, Loader2 } from "lucide-react";
 import { createSupabaseBrowserClient } from "@/lib/supabase-browser";
 
 export function LoginForm() {
-  const supabase = createSupabaseBrowserClient();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [otpMode, setOtpMode] = useState(false);
@@ -13,7 +12,22 @@ export function LoginForm() {
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
 
+  // Create the client lazily inside handlers only. Creating it during
+  // render also runs on the server while Next.js pre-renders /login at
+  // build time, which crashes `next build` when the Supabase public env
+  // vars are not set.
+  function getSupabase() {
+    try {
+      return createSupabaseBrowserClient();
+    } catch (error) {
+      setMessage(error instanceof Error ? error.message : "Supabase is not configured.");
+      return null;
+    }
+  }
+
   async function signInWithGoogle() {
+    const supabase = getSupabase();
+    if (!supabase) return;
     setLoading(true);
     const origin = window.location.origin;
     await supabase.auth.signInWithOAuth({
@@ -26,6 +40,8 @@ export function LoginForm() {
 
   async function signIn(e: React.FormEvent) {
     e.preventDefault();
+    const supabase = getSupabase();
+    if (!supabase) return;
     setLoading(true);
     setMessage("");
     const { error } = await supabase.auth.signInWithPassword({ email, password });
@@ -48,6 +64,11 @@ export function LoginForm() {
 
     setLoading(true);
     setMessage("");
+    const supabase = getSupabase();
+    if (!supabase) {
+      setLoading(false);
+      return;
+    }
     const { error } = await supabase.auth.signInWithOtp({
       email,
       options: {
@@ -75,6 +96,11 @@ export function LoginForm() {
 
     setLoading(true);
     setMessage("");
+    const supabase = getSupabase();
+    if (!supabase) {
+      setLoading(false);
+      return;
+    }
     const { error } = await supabase.auth.verifyOtp({
       email,
       token: otpCode,
@@ -96,6 +122,8 @@ export function LoginForm() {
       return;
     }
 
+    const supabase = getSupabase();
+    if (!supabase) return;
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: `${window.location.origin}/login`
     });
