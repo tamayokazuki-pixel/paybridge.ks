@@ -8,7 +8,6 @@ import { createSupabaseBrowserClient } from "@/lib/supabase-browser";
 const countries = ["United States", "Nigeria", "United Kingdom", "Ghana", "Kenya", "South Africa", "Canada", "Australia"];
 
 export function RegisterForm() {
-  const supabase = createSupabaseBrowserClient();
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState("");
   const [needsEmailConfirmation, setNeedsEmailConfirmation] = useState(false);
@@ -43,7 +42,22 @@ export function RegisterForm() {
     return "";
   }
 
+  // Create the client lazily inside handlers only. Creating it during
+  // render also runs on the server while Next.js pre-renders /register at
+  // build time, which crashes `next build` when the Supabase public env
+  // vars are not set.
+  function getSupabase() {
+    try {
+      return createSupabaseBrowserClient();
+    } catch (error) {
+      setMessage(normalizeMessage(error) || "Supabase is not configured.");
+      return null;
+    }
+  }
+
   async function signInWithGoogle() {
+    const supabase = getSupabase();
+    if (!supabase) return;
     setLoading(true);
     await supabase.auth.signInWithOAuth({
       provider: "google",
@@ -55,6 +69,8 @@ export function RegisterForm() {
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
+    const supabase = getSupabase();
+    if (!supabase) return;
     setLoading(true);
     setMessage("");
     setNeedsEmailConfirmation(false);
@@ -107,6 +123,8 @@ export function RegisterForm() {
   }
 
   async function resendConfirmation() {
+    const supabase = getSupabase();
+    if (!supabase) return;
     setLoading(true);
     setMessage("");
 
