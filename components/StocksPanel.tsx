@@ -4,7 +4,7 @@ import { Fragment, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowRight, ArrowRightLeft, CircleAlert, Minus, TrendingDown, TrendingUp, X } from "lucide-react";
 import { StockMovementChart } from "@/components/StockMovementChart";
-import { aggregateStockTrades, formatShares, type StockHolding, type StockQuote, type StockTrade } from "@/lib/stocks";
+import { aggregateStockTrades, formatShares, stockAssetCategory, type StockAssetCategory, type StockHolding, type StockQuote, type StockTrade } from "@/lib/stocks";
 import {
   createStockPriceSeries,
   formatStockMovementPercent,
@@ -16,6 +16,14 @@ import { money } from "@/lib/format";
 
 type Feedback = { kind: "success" | "error"; message: string } | null;
 type MarketQuote = StockQuote & { anchor_price_per_share: number };
+type MarketCategory = "all" | StockAssetCategory;
+
+const MARKET_CATEGORIES: Array<{ id: MarketCategory; label: string }> = [
+  { id: "all", label: "All assets" },
+  { id: "stocks", label: "Stocks" },
+  { id: "crypto", label: "Crypto" },
+  { id: "energy", label: "Energy & oil" }
+];
 
 function signedMoney(value: number) {
   if (!Number.isFinite(value) || value === 0) return money(0);
@@ -43,6 +51,7 @@ export function StocksPanel({
   const router = useRouter();
   const activeQuotes = useMemo(() => quotes.filter((quote) => quote.is_active !== false), [quotes]);
   const [symbol, setSymbol] = useState(activeQuotes[0]?.symbol || "");
+  const [assetCategory, setAssetCategory] = useState<MarketCategory>("all");
   const [sharesInput, setSharesInput] = useState("1");
   const [feedback, setFeedback] = useState<Feedback>(null);
   const [busy, setBusy] = useState(false);
@@ -74,6 +83,30 @@ export function StocksPanel({
     }),
     [activeQuotes, marketTimestamp]
   );
+
+  const visibleMarketQuotes = useMemo(
+    () => marketQuotes.filter((quote) => assetCategory === "all" || stockAssetCategory(quote) === assetCategory),
+    [assetCategory, marketQuotes]
+  );
+  const marketCategoryCounts = useMemo<Record<MarketCategory, number>>(
+    () => ({
+      all: marketQuotes.length,
+      stocks: marketQuotes.filter((quote) => stockAssetCategory(quote) === "stocks").length,
+      crypto: marketQuotes.filter((quote) => stockAssetCategory(quote) === "crypto").length,
+      energy: marketQuotes.filter((quote) => stockAssetCategory(quote) === "energy").length
+    }),
+    [marketQuotes]
+  );
+
+  function chooseAssetCategory(category: MarketCategory) {
+    setAssetCategory(category);
+    setFeedback(null);
+    if (category === "all") return;
+    const firstInCategory = marketQuotes.find((quote) => stockAssetCategory(quote) === category);
+    if (firstInCategory && stockAssetCategory(firstInCategory) === category && !marketQuotes.some((quote) => quote.symbol === symbol && stockAssetCategory(quote) === category)) {
+      setSymbol(firstInCategory.symbol);
+    }
+  }
 
   const selectedQuote = marketQuotes.find((quote) => quote.symbol === symbol) || marketQuotes[0];
   const shares = Number(sharesInput);
@@ -108,9 +141,11 @@ export function StocksPanel({
       }
 
       const order = payload.order;
+      const boughtQuantity = Number(order?.shares ?? shares);
+      const unitLabel = stockAssetCategory(selectedQuote) === "crypto" ? "unit" : "share";
       setFeedback({
         kind: "success",
-        message: `Bought ${formatShares(Number(order?.shares ?? shares))} ${selectedQuote.symbol} share${Number(order?.shares ?? shares) === 1 ? "" : "s"} for ${money(Number(order?.total_amount ?? estimatedTotal))}.`
+        message: `Bought ${formatShares(boughtQuantity)} ${selectedQuote.symbol} ${unitLabel}${boughtQuantity === 1 ? "" : "s"} for ${money(Number(order?.total_amount ?? estimatedTotal))}.`
       });
       setSharesInput("1");
       router.refresh();
@@ -218,16 +253,36 @@ export function StocksPanel({
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1.4fr)_minmax(300px,.8fr)]">
         <div className="card overflow-hidden">
-          <div className="flex flex-wrap items-start justify-between gap-3 border-b border-slate-100 p-5">
-            <div>
-              <h2 className="font-head text-xl font-bold">Market watch</h2>
-              <p className="mt-1 text-sm text-grey">Choose a company to prepare a buy order.</p>
+          <div className="border-b border-slate-100 p-5">
+            <div className="flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <h2 className="font-head text-xl font-bold">Market watch</h2>
+                <p className="mt-1 text-sm text-grey">Choose an asset to prepare a buy order.</p>
+              </div>
+              <span className="rounded-full bg-off px-3 py-1 text-xs font-bold text-grey">
+                {visibleMarketQuotes.length} of {activeQuotes.length} demo listings
+              </span>
             </div>
-            <span className="rounded-full bg-off px-3 py-1 text-xs font-bold text-grey">{activeQuotes.length} demo listings</span>
+            <div aria-label="Filter market listings" className="mt-4 flex flex-wrap gap-2" role="group">
+              {MARKET_CATEGORIES.map((category) => {
+                const selectedCategory = assetCategory === category.id;
+                return (
+                  <button
+                    aria-pressed={selectedCategory}
+                    className={`rounded-full border px-3 py-1.5 text-xs font-black transition ${selectedCategory ? "border-navy bg-navy text-white" : "border-slate-200 bg-white text-grey hover:border-teal hover:text-teal2"}`}
+                    key={category.id}
+                    onClick={() => chooseAssetCategory(category.id)}
+                    type="button"
+                  >
+                    {category.label} ({marketCategoryCounts[category.id]})
+                  </button>
+                );
+              })}
+            </div>
           </div>
-          {activeQuotes.length ? (
+          {visibleMarketQuotes.length ? (
             <div className="grid gap-3 p-4 sm:grid-cols-2">
-              {marketQuotes.map((quote) => {
+              {visibleMarketQuotes.map((quote) => {
                 const selected = selectedQuote?.symbol === quote.symbol;
                 const movementPoints = createStockPriceSeries(quote.anchor_price_per_share, quote.symbol, marketTimestamp);
                 const movement = stockMovementChange(movementPoints);
@@ -250,7 +305,7 @@ export function StocksPanel({
                         <p className="mt-3 truncate font-bold">{quote.company_name}</p>
                         <p className="mt-1 text-xs text-grey">{quote.sector}</p>
                       </div>
-                      <p className="shrink-0 text-right font-head text-lg font-bold">{money(Number(quote.price_per_share))}<span className="block font-sans text-[10px] font-medium text-grey">per share</span></p>
+                      <p className="shrink-0 text-right font-head text-lg font-bold">{money(Number(quote.price_per_share))}<span className="block font-sans text-[10px] font-medium text-grey">{stockAssetCategory(quote) === "crypto" ? "per unit" : "per share"}</span></p>
                     </div>
                     <div className="mt-4 border-t border-slate-100 pt-3">
                       <StockMovementChart points={movementPoints} symbol={quote.symbol} />
@@ -270,7 +325,7 @@ export function StocksPanel({
               })}
             </div>
           ) : (
-            <p className="p-8 text-center text-sm text-grey">There are no active demo listings.</p>
+            <p className="p-8 text-center text-sm text-grey">There are no active demo listings in this category.</p>
           )}
         </div>
 
@@ -278,7 +333,7 @@ export function StocksPanel({
           <div className="flex items-center gap-3">
             <span className="grid h-11 w-11 place-items-center rounded-xl bg-teal/10 text-teal2"><TrendingUp size={22} /></span>
             <div>
-              <h2 className="font-head text-xl font-bold">Buy shares</h2>
+              <h2 className="font-head text-xl font-bold">{selectedQuote && stockAssetCategory(selectedQuote) === "crypto" ? "Buy units" : "Buy shares"}</h2>
               <p className="text-xs text-grey">Amount is charged to available cash.</p>
             </div>
           </div>
@@ -286,10 +341,10 @@ export function StocksPanel({
             <>
               <div className="mt-5 rounded-xl bg-off p-4">
                 <p className="font-bold">{selectedQuote.company_name} <span className="text-grey">({selectedQuote.symbol})</span></p>
-                <p className="mt-1 text-sm text-grey">{money(Number(selectedQuote.price_per_share))} per share · current paper quote</p>
+                <p className="mt-1 text-sm text-grey">{money(Number(selectedQuote.price_per_share))} {stockAssetCategory(selectedQuote) === "crypto" ? "per unit" : "per share"} · current paper quote</p>
               </div>
               <div className="mt-5">
-                <label className="label" htmlFor="stock-shares">Number of shares</label>
+                <label className="label" htmlFor="stock-shares">Number of {stockAssetCategory(selectedQuote) === "crypto" ? "units" : "shares"}</label>
                 <input
                   autoComplete="off"
                   className="input text-xl font-bold"
@@ -302,7 +357,7 @@ export function StocksPanel({
                   type="number"
                   value={sharesInput}
                 />
-                <p className="mt-2 text-xs text-grey">Fractional shares supported, up to 4 decimal places.</p>
+                <p className="mt-2 text-xs text-grey">Fractional {stockAssetCategory(selectedQuote) === "crypto" ? "units" : "shares"} supported, up to 4 decimal places.</p>
               </div>
               <div className="mt-5 space-y-3 rounded-xl border border-slate-100 p-4 text-sm">
                 <div className="flex justify-between gap-3 text-grey"><span>Estimated order total</span><strong className="text-navy">{money(estimatedTotal)}</strong></div>
