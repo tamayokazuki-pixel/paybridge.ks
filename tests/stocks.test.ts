@@ -11,7 +11,7 @@ import { POST } from "@/app/api/stocks/buy/route";
 import { POST as sellPOST } from "@/app/api/stocks/sell/route";
 import { availableBalance } from "@/lib/balance";
 import { stockPriceMultiplier } from "@/lib/stock-movement";
-import { aggregateStockTrades, type StockQuote, type StockTrade } from "@/lib/stocks";
+import { aggregateStockTrades, stockAssetCategory, type StockQuote, type StockTrade } from "@/lib/stocks";
 
 const fixedNow = Date.UTC(2026, 0, 15, 14, 30, 0);
 
@@ -79,6 +79,15 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.restoreAllMocks();
+});
+
+describe("stock listing categories", () => {
+  it("separates equities, crypto assets, and energy/oil listings", () => {
+    expect(stockAssetCategory({ sector: "Technology" })).toBe("stocks");
+    expect(stockAssetCategory({ sector: "Cryptocurrency" })).toBe("crypto");
+    expect(stockAssetCategory({ sector: "Energy · Integrated Oil & Gas" })).toBe("energy");
+    expect(stockAssetCategory({ sector: "Oilfield Services" })).toBe("energy");
+  });
 });
 
 describe("stock purchase API", () => {

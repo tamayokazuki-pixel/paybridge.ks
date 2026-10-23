@@ -7,6 +7,15 @@ export type StockQuote = {
   updated_at?: string;
 };
 
+export type StockAssetCategory = "stocks" | "crypto" | "energy";
+
+export function stockAssetCategory(quote: Pick<StockQuote, "sector">): StockAssetCategory {
+  const sector = quote.sector.toLowerCase();
+  if (sector.includes("crypto")) return "crypto";
+  if (sector.includes("energy") || sector.includes("oil")) return "energy";
+  return "stocks";
+}
+
 export type StockTradeSide = "buy" | "sell";
 
 export type StockTrade = {
