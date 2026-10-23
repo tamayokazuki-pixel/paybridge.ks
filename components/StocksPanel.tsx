@@ -1,9 +1,17 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowRight, CircleAlert, TrendingUp } from "lucide-react";
+import { ArrowRight, CircleAlert, Minus, TrendingDown, TrendingUp } from "lucide-react";
+import { StockMovementChart } from "@/components/StockMovementChart";
 import { aggregateStockTrades, formatShares, type StockQuote, type StockTrade } from "@/lib/stocks";
+import {
+  advanceStockMovementSeries,
+  createStockMovementSeries,
+  formatStockMovementPercent,
+  stockMovementChange,
+  STOCK_MOVEMENT_UPDATE_MS
+} from "@/lib/stock-movement";
 import { money } from "@/lib/format";
 
 type Feedback = { kind: "success" | "error"; message: string } | null;
@@ -27,6 +35,55 @@ export function StocksPanel({
   const [sharesInput, setSharesInput] = useState("1");
   const [feedback, setFeedback] = useState<Feedback>(null);
   const [busy, setBusy] = useState(false);
+  const [movementBySymbol, setMovementBySymbol] = useState<Record<string, number[]>>(() =>
+    Object.fromEntries(activeQuotes.map((quote) => [quote.symbol, createStockMovementSeries(quote.symbol)]))
+  );
+  const movementTickRef = useRef(0);
+
+  useEffect(() => {
+    setMovementBySymbol((current) => {
+      let changed = false;
+      const next: Record<string, number[]> = {};
+
+      for (const quote of activeQuotes) {
+        if (current[quote.symbol]) {
+          next[quote.symbol] = current[quote.symbol];
+        } else {
+          next[quote.symbol] = createStockMovementSeries(quote.symbol);
+          changed = true;
+        }
+      }
+
+      if (Object.keys(current).length !== Object.keys(next).length) changed = true;
+      return changed ? next : current;
+    });
+  }, [activeQuotes]);
+
+  useEffect(() => {
+    if (!activeQuotes.length) return;
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+
+    const interval = window.setInterval(() => {
+      if (document.visibilityState === "hidden") return;
+      movementTickRef.current += 1;
+      const tick = movementTickRef.current;
+
+      setMovementBySymbol((current) =>
+        Object.fromEntries(
+          activeQuotes.map((quote) => [
+            quote.symbol,
+            advanceStockMovementSeries(
+              current[quote.symbol] ?? createStockMovementSeries(quote.symbol),
+              quote.symbol,
+              tick
+            )
+          ])
+        )
+      );
+    }, STOCK_MOVEMENT_UPDATE_MS);
+
+    return () => window.clearInterval(interval);
+  }, [activeQuotes]);
 
   const selectedQuote = activeQuotes.find((quote) => quote.symbol === symbol) || activeQuotes[0];
   const shares = Number(sharesInput);
@@ -126,6 +183,13 @@ export function StocksPanel({
             <div className="grid gap-3 p-4 sm:grid-cols-2">
               {activeQuotes.map((quote) => {
                 const selected = selectedQuote?.symbol === quote.symbol;
+                const movementPoints = movementBySymbol[quote.symbol] ?? createStockMovementSeries(quote.symbol);
+                const movement = stockMovementChange(movementPoints);
+                const MovementIcon = movement.direction === "up"
+                  ? TrendingUp
+                  : movement.direction === "down"
+                    ? TrendingDown
+                    : Minus;
                 return (
                   <button
                     aria-pressed={selected}
@@ -141,6 +205,19 @@ export function StocksPanel({
                         <p className="mt-1 text-xs text-grey">{quote.sector}</p>
                       </div>
                       <p className="shrink-0 text-right font-head text-lg font-bold">{money(Number(quote.price_per_share))}<span className="block font-sans text-[10px] font-medium text-grey">per share</span></p>
+                    </div>
+                    <div className="mt-4 border-t border-slate-100 pt-3">
+                      <StockMovementChart points={movementPoints} symbol={quote.symbol} />
+                      <div className="mt-2 flex items-center justify-between gap-3 text-[11px]">
+                        <span className="inline-flex items-center gap-1.5 font-semibold text-grey">
+                          <span className={`h-2 w-2 rounded-full ${movement.direction === "down" ? "bg-rose-500" : movement.direction === "up" ? "bg-teal2" : "bg-slate-400"} animate-pulse motion-reduce:animate-none`} />
+                          Session movement
+                        </span>
+                        <span className={`inline-flex items-center gap-1 font-black ${movement.direction === "down" ? "text-rose-600" : movement.direction === "up" ? "text-teal2" : "text-slate-500"}`}>
+                          <MovementIcon aria-hidden="true" size={13} strokeWidth={2.5} />
+                          {formatStockMovementPercent(movement.percent)}
+                        </span>
+                      </div>
                     </div>
                   </button>
                 );
