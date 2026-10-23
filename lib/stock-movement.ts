@@ -1,5 +1,7 @@
 export const STOCK_MOVEMENT_POINT_COUNT = 32;
 export const STOCK_MOVEMENT_UPDATE_MS = 2_500;
+export const STOCK_PRICE_MIN_MULTIPLIER = 0.94;
+export const STOCK_PRICE_MAX_MULTIPLIER = 1.06;
 
 export type StockMovementDirection = "up" | "down" | "flat";
 
@@ -22,9 +24,8 @@ export type StockSparklineGeometry = {
   baselineY: number;
 };
 
-const BASE_INDEX = 100;
-const MIN_INDEX = 94.5;
-const MAX_INDEX = 105.5;
+const FALLBACK_POINT = 100;
+const NOISE_NODE_TICKS = 24;
 
 function hashSymbol(symbol: string) {
   let hash = 0x811c9dc5;
@@ -38,18 +39,6 @@ function hashSymbol(symbol: string) {
   return hash >>> 0;
 }
 
-function mulberry32(seed: number) {
-  let state = seed >>> 0;
-
-  return () => {
-    state = (state + 0x6d2b79f5) >>> 0;
-    let value = state;
-    value = Math.imul(value ^ (value >>> 15), value | 1);
-    value ^= value + Math.imul(value ^ (value >>> 7), value | 61);
-    return ((value ^ (value >>> 14)) >>> 0) / 4_294_967_296;
-  };
-}
-
 function splitmix32(seed: number) {
   let value = (seed + 0x9e3779b9) >>> 0;
   value = Math.imul(value ^ (value >>> 16), 0x21f0aaad);
@@ -57,89 +46,100 @@ function splitmix32(seed: number) {
   return ((value ^ (value >>> 15)) >>> 0) / 4_294_967_296;
 }
 
+function seededUnit(seed: number, salt: number) {
+  return splitmix32(seed ^ Math.imul(salt + 1, 0x85ebca6b));
+}
+
 function clamp(value: number, minimum: number, maximum: number) {
   return Math.min(maximum, Math.max(minimum, value));
 }
 
-function roundMovement(value: number) {
-  return Math.round(value * 10_000) / 10_000;
+function roundMultiplier(value: number) {
+  return Math.round(value * 1_000_000) / 1_000_000;
+}
+
+function roundCurrency(value: number) {
+  return Math.round((value + Number.EPSILON) * 100) / 100;
 }
 
 function roundCoordinate(value: number) {
   return Math.round(value * 100) / 100;
 }
 
-function symbolDrift(seed: number) {
-  return ((((seed >>> 8) % 2001) - 1000) / 1000) * 0.1;
-}
-
-function symbolPhase(seed: number) {
-  return (seed % 628) / 100;
-}
-
 function sanitizePoints(points: readonly number[]) {
   const values = points.filter((point) => Number.isFinite(point));
-  if (!values.length) return [BASE_INDEX, BASE_INDEX];
+  if (!values.length) return [FALLBACK_POINT, FALLBACK_POINT];
   if (values.length === 1) return [values[0], values[0]];
   return values;
 }
 
+function seededNoise(seed: number, node: number) {
+  const mixedSeed = seed ^ Math.imul(node + 0x9e3779b9, 0x85ebca6b);
+  return splitmix32(mixedSeed) * 2 - 1;
+}
+
+function interpolatedNoise(seed: number, tick: number) {
+  const node = Math.floor(tick / NOISE_NODE_TICKS);
+  const fraction = (tick - node * NOISE_NODE_TICKS) / NOISE_NODE_TICKS;
+  const smoothFraction = fraction * fraction * (3 - 2 * fraction);
+  const start = seededNoise(seed, node);
+  const end = seededNoise(seed, node + 1);
+  return start + (end - start) * smoothFraction;
+}
+
+export function stockMarketTick(timestampMs: number) {
+  const safeTimestamp = Number.isFinite(timestampMs) ? Math.max(0, timestampMs) : 0;
+  return Math.floor(safeTimestamp / STOCK_MOVEMENT_UPDATE_MS);
+}
+
 /**
- * Build a stable, symbol-specific session movement index.
+ * Price multiplier for the paper market at a point in time.
  *
- * The series is deterministic for a ticker, which keeps server and client
- * rendering in agreement. It is used only to draw each card's movement
- * chart; the server-side quote remains the value used for paper orders.
+ * The value is a deterministic, bounded function of ticker and timestamp.
+ * The browser uses it for display; the Next.js API recalculates it on the
+ * server for an order, and the database RPC only accepts a bounded result
+ * around the stored anchor quote.
  */
-export function createStockMovementSeries(
+export function stockPriceMultiplier(symbol: string, timestampMs: number) {
+  const seed = hashSymbol(symbol);
+  const tick = stockMarketTick(timestampMs);
+  const twoPi = Math.PI * 2;
+
+  const waves = [
+    { period: 144, amplitude: 0.003 + seededUnit(seed, 1) * 0.0025, phase: seededUnit(seed, 2) * twoPi },
+    { period: 720, amplitude: 0.005 + seededUnit(seed, 3) * 0.004, phase: seededUnit(seed, 4) * twoPi },
+    { period: 4_320, amplitude: 0.008 + seededUnit(seed, 5) * 0.006, phase: seededUnit(seed, 6) * twoPi },
+    { period: 34_560, amplitude: 0.007 + seededUnit(seed, 7) * 0.005, phase: seededUnit(seed, 8) * twoPi }
+  ];
+
+  const waveMovement = waves.reduce(
+    (total, wave) => total + Math.sin((tick / wave.period) * twoPi + wave.phase) * wave.amplitude,
+    0
+  );
+  const noiseMovement = interpolatedNoise(seed, tick) * 0.0075;
+
+  return roundMultiplier(clamp(1 + waveMovement + noiseMovement, STOCK_PRICE_MIN_MULTIPLIER, STOCK_PRICE_MAX_MULTIPLIER));
+}
+
+export function simulatedStockPrice(anchorPrice: number, symbol: string, timestampMs: number) {
+  const safeAnchor = Number(anchorPrice);
+  if (!Number.isFinite(safeAnchor) || safeAnchor <= 0) return 0;
+  return Math.max(0.01, roundCurrency(safeAnchor * stockPriceMultiplier(symbol, timestampMs)));
+}
+
+export function createStockPriceSeries(
+  anchorPrice: number,
   symbol: string,
+  timestampMs: number,
   pointCount = STOCK_MOVEMENT_POINT_COUNT
 ): number[] {
   const count = Math.max(2, Math.trunc(pointCount) || STOCK_MOVEMENT_POINT_COUNT);
-  const seed = hashSymbol(symbol);
-  const random = mulberry32(seed);
-  const drift = symbolDrift(seed);
-  const phase = symbolPhase(seed);
+  const endTick = stockMarketTick(timestampMs);
 
-  let value = BASE_INDEX + (random() - 0.5) * 1.6;
-  const series = [roundMovement(value)];
-
-  for (let index = 1; index < count; index += 1) {
-    const shock = (random() - 0.5) * 0.72;
-    const wave = Math.sin(index / 4.2 + phase) * 0.07;
-    const meanReversion = (BASE_INDEX - value) * 0.018;
-    value = clamp(value + drift + shock + wave + meanReversion, MIN_INDEX, MAX_INDEX);
-    series.push(roundMovement(value));
-  }
-
-  return series;
-}
-
-export function nextStockMovementValue(symbol: string, previousValue: number, tick: number) {
-  const seed = hashSymbol(symbol);
-  const safeTick = Math.max(0, Math.trunc(tick) || 0);
-  const safePrevious = Number.isFinite(previousValue)
-    ? clamp(previousValue, MIN_INDEX, MAX_INDEX)
-    : BASE_INDEX;
-  const random = splitmix32(seed ^ Math.imul(safeTick + 1, 0x85ebca6b));
-  const drift = symbolDrift(seed) * 0.65;
-  const shock = (random - 0.5) * 0.62;
-  const wave = Math.sin(safeTick / 4.5 + symbolPhase(seed)) * 0.06;
-  const meanReversion = (BASE_INDEX - safePrevious) * 0.022;
-
-  return roundMovement(clamp(safePrevious + drift + shock + wave + meanReversion, MIN_INDEX, MAX_INDEX));
-}
-
-export function advanceStockMovementSeries(
-  series: readonly number[],
-  symbol: string,
-  tick: number,
-  maxPoints = STOCK_MOVEMENT_POINT_COUNT
-): number[] {
-  const limit = Math.max(2, Math.trunc(maxPoints) || STOCK_MOVEMENT_POINT_COUNT);
-  const safeSeries = sanitizePoints(series);
-  const nextValue = nextStockMovementValue(symbol, safeSeries[safeSeries.length - 1], tick);
-  return [...safeSeries.slice(-(limit - 1)), nextValue];
+  return Array.from({ length: count }, (_, index) => {
+    const tick = endTick - (count - 1 - index);
+    return simulatedStockPrice(anchorPrice, symbol, tick * STOCK_MOVEMENT_UPDATE_MS);
+  });
 }
 
 export function stockMovementChange(points: readonly number[]): StockMovementChange {
