@@ -1,20 +1,31 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowRight, CircleAlert, Minus, TrendingDown, TrendingUp } from "lucide-react";
+import { ArrowRight, ArrowRightLeft, CircleAlert, Minus, TrendingDown, TrendingUp, X } from "lucide-react";
 import { StockMovementChart } from "@/components/StockMovementChart";
-import { aggregateStockTrades, formatShares, type StockQuote, type StockTrade } from "@/lib/stocks";
+import { aggregateStockTrades, formatShares, type StockHolding, type StockQuote, type StockTrade } from "@/lib/stocks";
 import {
-  advanceStockMovementSeries,
-  createStockMovementSeries,
+  createStockPriceSeries,
   formatStockMovementPercent,
+  simulatedStockPrice,
   stockMovementChange,
   STOCK_MOVEMENT_UPDATE_MS
 } from "@/lib/stock-movement";
 import { money } from "@/lib/format";
 
 type Feedback = { kind: "success" | "error"; message: string } | null;
+type MarketQuote = StockQuote & { anchor_price_per_share: number };
+
+function signedMoney(value: number) {
+  if (!Number.isFinite(value) || value === 0) return money(0);
+  return `${value > 0 ? "+" : "-"}${money(Math.abs(value))}`;
+}
+
+function isValidShareQuantity(value: number) {
+  return Number.isFinite(value) && value >= 0.0001 && value <= 1_000_000 &&
+    Math.abs(value * 10_000 - Math.round(value * 10_000)) < 0.00001;
+}
 
 export function StocksPanel({
   availableBalance,
@@ -35,68 +46,47 @@ export function StocksPanel({
   const [sharesInput, setSharesInput] = useState("1");
   const [feedback, setFeedback] = useState<Feedback>(null);
   const [busy, setBusy] = useState(false);
-  const [movementBySymbol, setMovementBySymbol] = useState<Record<string, number[]>>(() =>
-    Object.fromEntries(activeQuotes.map((quote) => [quote.symbol, createStockMovementSeries(quote.symbol)]))
-  );
-  const movementTickRef = useRef(0);
-
-  useEffect(() => {
-    setMovementBySymbol((current) => {
-      let changed = false;
-      const next: Record<string, number[]> = {};
-
-      for (const quote of activeQuotes) {
-        if (current[quote.symbol]) {
-          next[quote.symbol] = current[quote.symbol];
-        } else {
-          next[quote.symbol] = createStockMovementSeries(quote.symbol);
-          changed = true;
-        }
-      }
-
-      if (Object.keys(current).length !== Object.keys(next).length) changed = true;
-      return changed ? next : current;
-    });
-  }, [activeQuotes]);
+  const [marketTimestamp, setMarketTimestamp] = useState(() => Date.now());
+  const [sellSymbol, setSellSymbol] = useState<string | null>(null);
+  const [sellSharesInput, setSellSharesInput] = useState("");
+  const [sellFeedback, setSellFeedback] = useState<Feedback>(null);
+  const [sellBusy, setSellBusy] = useState(false);
 
   useEffect(() => {
     if (!activeQuotes.length) return;
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
 
     const interval = window.setInterval(() => {
-      if (document.visibilityState === "hidden") return;
-      movementTickRef.current += 1;
-      const tick = movementTickRef.current;
-
-      setMovementBySymbol((current) =>
-        Object.fromEntries(
-          activeQuotes.map((quote) => [
-            quote.symbol,
-            advanceStockMovementSeries(
-              current[quote.symbol] ?? createStockMovementSeries(quote.symbol),
-              quote.symbol,
-              tick
-            )
-          ])
-        )
-      );
+      if (document.visibilityState !== "hidden") setMarketTimestamp(Date.now());
     }, STOCK_MOVEMENT_UPDATE_MS);
 
     return () => window.clearInterval(interval);
-  }, [activeQuotes]);
+  }, [activeQuotes.length]);
 
-  const selectedQuote = activeQuotes.find((quote) => quote.symbol === symbol) || activeQuotes[0];
+  const marketQuotes = useMemo<MarketQuote[]>(
+    () => activeQuotes.map((quote) => {
+      const anchorPrice = Number(quote.price_per_share);
+      return {
+        ...quote,
+        anchor_price_per_share: anchorPrice,
+        price_per_share: simulatedStockPrice(anchorPrice, quote.symbol, marketTimestamp)
+      };
+    }),
+    [activeQuotes, marketTimestamp]
+  );
+
+  const selectedQuote = marketQuotes.find((quote) => quote.symbol === symbol) || marketQuotes[0];
   const shares = Number(sharesInput);
   const estimatedTotal = selectedQuote && Number.isFinite(shares) && shares > 0
     ? Math.round(shares * Number(selectedQuote.price_per_share) * 100) / 100
     : 0;
-  const holdings = useMemo(() => aggregateStockTrades(trades, quotes), [trades, quotes]);
+  const holdings = useMemo(() => aggregateStockTrades(trades, marketQuotes), [trades, marketQuotes]);
   const totalInvested = holdings.reduce((total, holding) => total + holding.total_invested, 0);
-  const totalReferenceValue = holdings.reduce((total, holding) => total + holding.reference_value, 0);
-  const canBuy = tradingReady && accountActive && Boolean(selectedQuote) && !busy &&
-    Number.isFinite(shares) && shares >= 0.0001 && shares <= 1_000_000 &&
-    Math.abs(shares * 10_000 - Math.round(shares * 10_000)) < 0.00001 &&
-    estimatedTotal >= 0.01 && estimatedTotal <= availableBalance;
+  const totalCurrentValue = holdings.reduce((total, holding) => total + holding.reference_value, 0);
+  const totalGainLoss = holdings.reduce((total, holding) => total + holding.unrealized_gain_loss, 0);
+  const totalGainLossPercent = totalInvested > 0 ? (totalGainLoss / totalInvested) * 100 : 0;
+  const canBuy = tradingReady && accountActive && Boolean(selectedQuote) && !busy && !sellBusy &&
+    isValidShareQuantity(shares) && estimatedTotal >= 0.01 && estimatedTotal <= availableBalance;
 
   async function buyStock(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -131,6 +121,62 @@ export function StocksPanel({
     }
   }
 
+  function openSellForm(holding: StockHolding) {
+    if (sellSymbol === holding.symbol) {
+      setSellSymbol(null);
+      return;
+    }
+    setSellSymbol(holding.symbol);
+    setSellSharesInput(String(holding.shares));
+    setSellFeedback(null);
+  }
+
+  function setSellFraction(holding: StockHolding, fraction: number) {
+    const nextShares = fraction >= 1
+      ? holding.shares
+      : Math.floor(holding.shares * fraction * 10_000) / 10_000;
+    setSellSharesInput(nextShares > 0 ? String(nextShares) : "");
+    setSellFeedback(null);
+  }
+
+  async function sellStock(event: React.FormEvent<HTMLFormElement>, holding: StockHolding) {
+    event.preventDefault();
+    const sharesToSell = Number(sellSharesInput);
+    if (!accountActive || busy || sellBusy || !isValidShareQuantity(sharesToSell) || sharesToSell > holding.shares) return;
+
+    setSellBusy(true);
+    setSellFeedback(null);
+    try {
+      const response = await fetch("/api/stocks/sell", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ symbol: holding.symbol, shares: sharesToSell })
+      });
+      const payload = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        setSellFeedback({ kind: "error", message: payload.error || "Could not complete this sale." });
+        return;
+      }
+
+      const order = payload.order;
+      const soldShares = Number(order?.shares ?? sharesToSell);
+      const proceeds = Number(order?.total_amount ?? sharesToSell * holding.reference_price);
+      const remainingShares = Number(order?.remaining_shares);
+      setSellFeedback({
+        kind: "success",
+        message: `Converted ${formatShares(soldShares)} ${holding.symbol} share${soldShares === 1 ? "" : "s"} into ${money(proceeds)} available cash.${Number.isFinite(remainingShares) ? ` Remaining position: ${formatShares(Math.max(0, remainingShares))} shares.` : ""}`
+      });
+      setSellSymbol(null);
+      setSellSharesInput("");
+      router.refresh();
+    } catch {
+      setSellFeedback({ kind: "error", message: "A network error stopped the sale. Please try again." });
+    } finally {
+      setSellBusy(false);
+    }
+  }
+
   if (!tradingReady) {
     return (
       <div className="card p-8">
@@ -148,7 +194,7 @@ export function StocksPanel({
         <div>
           <p className="text-xs font-bold uppercase tracking-[.12em] text-white/50">Available to invest</p>
           <p className="mt-2 font-head text-4xl font-black">{money(availableBalance)}</p>
-          <p className="mt-2 max-w-xl text-sm leading-6 text-white/60">Buy fractional shares using your available cash balance. Purchases are recorded immediately in your account ledger.</p>
+          <p className="mt-2 max-w-xl text-sm leading-6 text-white/60">Buy and sell fractional shares with your available cash. Sale proceeds are converted back into available cash immediately.</p>
         </div>
         <div className="mt-5 flex shrink-0 items-center gap-3 rounded-xl border border-white/10 bg-white/5 p-4 md:mt-0">
           <span className="grid h-11 w-11 place-items-center rounded-full bg-teal/15 text-teal"><TrendingUp size={22} /></span>
@@ -161,7 +207,7 @@ export function StocksPanel({
 
       {accountActive ? null : (
         <div className="flex gap-3 rounded-xl border border-red-200 bg-red-50 p-4 text-sm font-semibold text-red-700" role="alert">
-          <CircleAlert className="mt-0.5 shrink-0" size={18} /> Stock purchases are disabled while your account is suspended.
+          <CircleAlert className="mt-0.5 shrink-0" size={18} /> Stock trades are disabled while your account is suspended.
         </div>
       )}
       {feedback ? (
@@ -181,9 +227,9 @@ export function StocksPanel({
           </div>
           {activeQuotes.length ? (
             <div className="grid gap-3 p-4 sm:grid-cols-2">
-              {activeQuotes.map((quote) => {
+              {marketQuotes.map((quote) => {
                 const selected = selectedQuote?.symbol === quote.symbol;
-                const movementPoints = movementBySymbol[quote.symbol] ?? createStockMovementSeries(quote.symbol);
+                const movementPoints = createStockPriceSeries(quote.anchor_price_per_share, quote.symbol, marketTimestamp);
                 const movement = stockMovementChange(movementPoints);
                 const MovementIcon = movement.direction === "up"
                   ? TrendingUp
@@ -240,7 +286,7 @@ export function StocksPanel({
             <>
               <div className="mt-5 rounded-xl bg-off p-4">
                 <p className="font-bold">{selectedQuote.company_name} <span className="text-grey">({selectedQuote.symbol})</span></p>
-                <p className="mt-1 text-sm text-grey">{money(Number(selectedQuote.price_per_share))} per share · sample quote</p>
+                <p className="mt-1 text-sm text-grey">{money(Number(selectedQuote.price_per_share))} per share · current paper quote</p>
               </div>
               <div className="mt-5">
                 <label className="label" htmlFor="stock-shares">Number of shares</label>
@@ -278,27 +324,166 @@ export function StocksPanel({
         <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 p-5">
           <div>
             <h2 className="font-head text-xl font-bold">My portfolio</h2>
-            <p className="mt-1 text-sm text-grey">Positions created from your simulated buy orders.</p>
+            <p className="mt-1 text-sm text-grey">Values move with the paper market. Sell shares to convert them back into available cash.</p>
           </div>
-          <div className="flex gap-5 text-right text-sm">
-            <div><p className="text-xs text-grey">Total invested</p><p className="mt-1 font-bold">{money(totalInvested)}</p></div>
-            <div><p className="text-xs text-grey">Value at sample quotes</p><p className="mt-1 font-bold">{money(totalReferenceValue)}</p></div>
+          <div className="flex flex-wrap gap-5 text-right text-sm">
+            <div><p className="text-xs text-grey">Cost basis</p><p className="mt-1 font-bold">{money(totalInvested)}</p></div>
+            <div><p className="text-xs text-grey">Current value</p><p className="mt-1 font-bold">{money(totalCurrentValue)}</p></div>
+            <div>
+              <p className="text-xs text-grey">Gain/loss</p>
+              <p className={`mt-1 font-bold ${totalGainLoss > 0 ? "text-teal2" : totalGainLoss < 0 ? "text-rose-600" : "text-navy"}`}>
+                {signedMoney(totalGainLoss)}
+                <span className="ml-1 text-xs font-black">{formatStockMovementPercent(totalGainLossPercent)}</span>
+              </p>
+            </div>
           </div>
         </div>
+        {sellFeedback ? (
+          <div className="border-b border-slate-100 p-5">
+            <div className={`rounded-lg border p-3 text-sm font-bold ${sellFeedback.kind === "success" ? "border-teal/20 bg-teal/10 text-teal2" : "border-red-200 bg-red-50 text-red-700"}`} role={sellFeedback.kind === "error" ? "alert" : "status"}>
+              {sellFeedback.message}
+            </div>
+          </div>
+        ) : null}
         {holdings.length ? (
           <div className="table-wrap">
             <table>
-              <thead><tr><th>Company</th><th>Shares</th><th>Average cost</th><th>Invested</th><th>Sample value</th></tr></thead>
+              <thead><tr><th>Company</th><th>Shares</th><th>Average cost</th><th>Current price</th><th>Cost basis</th><th>Current value</th><th>Gain/loss</th><th>Action</th></tr></thead>
               <tbody>
-                {holdings.map((holding) => (
-                  <tr key={holding.symbol}>
-                    <td><p className="font-bold">{holding.company_name}</p><p className="mt-1 text-xs text-grey">{holding.symbol}</p></td>
-                    <td>{formatShares(holding.shares)}</td>
-                    <td>{money(holding.average_cost)}</td>
-                    <td>{money(holding.total_invested)}</td>
-                    <td>{money(holding.reference_value)}</td>
-                  </tr>
-                ))}
+                {holdings.map((holding) => {
+                  const isSelling = sellSymbol === holding.symbol;
+                  const sharesToSell = isSelling ? Number(sellSharesInput) : 0;
+                  const estimatedProceeds = Number.isFinite(sharesToSell) && sharesToSell > 0
+                    ? Math.round(sharesToSell * holding.reference_price * 100) / 100
+                    : 0;
+                  const remainingShares = Number.isFinite(sharesToSell)
+                    ? Math.max(0, holding.shares - sharesToSell)
+                    : holding.shares;
+                  const canSell = accountActive && tradingReady && !busy && !sellBusy &&
+                    isValidShareQuantity(sharesToSell) && sharesToSell <= holding.shares && estimatedProceeds >= 0.01;
+                  const gainLossColor = holding.unrealized_gain_loss > 0
+                    ? "text-teal2"
+                    : holding.unrealized_gain_loss < 0
+                      ? "text-rose-600"
+                      : "text-slate-500";
+                  const GainLossIcon = holding.unrealized_gain_loss > 0
+                    ? TrendingUp
+                    : holding.unrealized_gain_loss < 0
+                      ? TrendingDown
+                      : Minus;
+
+                  return (
+                    <Fragment key={holding.symbol}>
+                      <tr>
+                        <td><p className="font-bold">{holding.company_name}</p><p className="mt-1 text-xs text-grey">{holding.symbol}</p></td>
+                        <td>{formatShares(holding.shares)}</td>
+                        <td>{money(holding.average_cost)}</td>
+                        <td className="font-semibold">{money(holding.reference_price)}</td>
+                        <td>{money(holding.total_invested)}</td>
+                        <td className="font-semibold">{money(holding.reference_value)}</td>
+                        <td>
+                          <p className={`font-bold ${gainLossColor}`}>{signedMoney(holding.unrealized_gain_loss)}</p>
+                          <p className={`mt-1 inline-flex items-center gap-1 text-xs font-black ${gainLossColor}`}>
+                            <GainLossIcon aria-hidden="true" size={12} strokeWidth={2.5} />
+                            {formatStockMovementPercent(holding.unrealized_gain_loss_percent)}
+                          </p>
+                        </td>
+                        <td>
+                          <button
+                            aria-expanded={isSelling}
+                            className="btn-secondary whitespace-nowrap px-3 py-2 text-sm disabled:cursor-not-allowed disabled:opacity-50"
+                            disabled={!accountActive || busy || sellBusy}
+                            onClick={() => openSellForm(holding)}
+                            type="button"
+                          >
+                            <ArrowRightLeft aria-hidden="true" size={15} /> Sell
+                          </button>
+                        </td>
+                      </tr>
+                      {isSelling ? (
+                        <tr>
+                          <td className="bg-off/70 p-5" colSpan={8}>
+                            <form onSubmit={(event) => sellStock(event, holding)}>
+                              <div className="flex flex-wrap items-start justify-between gap-3">
+                                <div>
+                                  <h3 className="font-head text-lg font-bold">Convert {holding.symbol} to cash</h3>
+                                  <p className="mt-1 text-sm text-grey">
+                                    You own {formatShares(holding.shares)} shares. Current paper price: {money(holding.reference_price)} per share.
+                                  </p>
+                                </div>
+                                <button
+                                  aria-label={`Close ${holding.symbol} sale form`}
+                                  className="btn-secondary px-2.5 py-2"
+                                  disabled={sellBusy}
+                                  onClick={() => setSellSymbol(null)}
+                                  type="button"
+                                >
+                                  <X aria-hidden="true" size={16} />
+                                </button>
+                              </div>
+
+                              <div className="mt-5 grid gap-5 lg:grid-cols-[minmax(0,1fr)_280px]">
+                                <div>
+                                  <label className="label" htmlFor={`sell-shares-${holding.symbol}`}>Shares to convert</label>
+                                  <input
+                                    autoComplete="off"
+                                    className="input text-xl font-bold"
+                                    id={`sell-shares-${holding.symbol}`}
+                                    max={holding.shares}
+                                    min="0.0001"
+                                    onChange={(event) => setSellSharesInput(event.target.value)}
+                                    required
+                                    step="0.0001"
+                                    type="number"
+                                    value={sellSharesInput}
+                                  />
+                                  <div className="mt-3 flex flex-wrap gap-2">
+                                    {([
+                                      ["25%", 0.25],
+                                      ["50%", 0.5],
+                                      ["75%", 0.75],
+                                      ["Max", 1]
+                                    ] as Array<[string, number]>).map(([label, fraction]) => (
+                                      <button
+                                        className="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-xs font-black text-navy transition hover:border-teal hover:text-teal2 disabled:opacity-50"
+                                        disabled={sellBusy}
+                                        key={label}
+                                        onClick={() => setSellFraction(holding, fraction)}
+                                        type="button"
+                                      >
+                                        {label}
+                                      </button>
+                                    ))}
+                                  </div>
+                                  {Number.isFinite(sharesToSell) && sharesToSell > holding.shares ? (
+                                    <p className="mt-3 text-xs font-semibold text-red-700">You only own {formatShares(holding.shares)} shares of {holding.symbol}.</p>
+                                  ) : null}
+                                  {sellSharesInput && !isValidShareQuantity(sharesToSell) && sharesToSell <= holding.shares ? (
+                                    <p className="mt-3 text-xs font-semibold text-red-700">Enter at least 0.0001 shares, using up to 4 decimal places.</p>
+                                  ) : null}
+                                  {isValidShareQuantity(sharesToSell) && sharesToSell <= holding.shares && estimatedProceeds < 0.01 ? (
+                                    <p className="mt-3 text-xs font-semibold text-red-700">Sale proceeds must be at least $0.01.</p>
+                                  ) : null}
+                                </div>
+
+                                <div className="space-y-3 rounded-xl border border-slate-200 bg-white p-4 text-sm">
+                                  <div className="flex justify-between gap-3 text-grey"><span>Estimated cash</span><strong className="text-navy">{money(estimatedProceeds)}</strong></div>
+                                  <div className="flex justify-between gap-3 text-grey"><span>Remaining shares</span><strong className="text-navy">{formatShares(remainingShares)}</strong></div>
+                                  <div className="flex justify-between gap-3 text-grey"><span>Available cash now</span><strong className="text-navy">{money(availableBalance)}</strong></div>
+                                  <p className="border-t border-slate-100 pt-3 text-xs leading-5 text-grey">Final proceeds use the paper-market price when the sale executes and are added to available cash.</p>
+                                </div>
+                              </div>
+
+                              <button className="btn-primary mt-5 disabled:cursor-not-allowed disabled:opacity-50" disabled={!canSell} type="submit">
+                                {sellBusy ? "Converting…" : <>Convert to cash <ArrowRightLeft aria-hidden="true" size={17} /></>}
+                              </button>
+                            </form>
+                          </td>
+                        </tr>
+                      ) : null}
+                    </Fragment>
+                  );
+                })}
               </tbody>
             </table>
           </div>

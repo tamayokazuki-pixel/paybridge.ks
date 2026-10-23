@@ -77,6 +77,7 @@ export function DashboardClient({
       .filter(
         (txn) =>
           txn.status === "completed" &&
+          txn.method_key !== "stocks" &&
           (txn.type === "deposit" || txn.type === "admin_adjustment")
       )
       .reduce((sum, txn) => sum + Number(txn.amount), 0),
@@ -177,7 +178,7 @@ export function DashboardClient({
 
         {profile.status === "suspended" ? (
           <div className="mb-5 rounded-lg border border-red-200 bg-red-50 p-3 text-sm font-bold text-red-700" role="alert">
-            Your account is suspended. New deposit, withdrawal, and stock purchases are unavailable; please contact support.
+            Your account is suspended. New deposit, withdrawal, and stock trades are unavailable; please contact support.
           </div>
         ) : null}
         {notice ? <div className="mb-5 rounded-lg border border-teal/20 bg-teal/10 p-3 text-sm font-bold text-teal2">{notice}</div> : null}
@@ -336,8 +337,8 @@ function TransactionList({ transactions }: { transactions: Transaction[] }) {
                   <tr key={txn.id}>
                     <td className="font-bold">{txn.description}</td>
                     <td>{txn.method_label || "Internal"}</td>
-                    <td className={txn.method_key === "stocks" ? "font-semibold text-red-700" : undefined}>
-                      {txn.method_key === "stocks" ? `−${money(txn.amount)}` : money(txn.amount)}
+                    <td className={txn.method_key === "stocks" ? `font-semibold ${txn.type === "deposit" ? "text-teal2" : "text-red-700"}` : undefined}>
+                      {txn.method_key === "stocks" ? `${txn.type === "deposit" ? "+" : "−"}${money(txn.amount)}` : money(txn.amount)}
                     </td>
                     <td><span className={`pill ${txn.status}`}>{txn.status}</span></td>
                     <td>{new Date(txn.created_at).toLocaleDateString()}</td>

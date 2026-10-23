@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getCurrentUser } from "@/lib/auth";
 import { isActiveAccount } from "@/lib/cheque-server";
+import { stockPriceMultiplier } from "@/lib/stock-movement";
 import { createSupabaseAdminClient } from "@/lib/supabase-server";
 
 type RpcError = { code?: string | null; message?: string | null; details?: string | null };
@@ -34,7 +35,7 @@ function purchaseError(error: RpcError) {
     ["PGRST202", "PGRST204", "PGRST205", "42P01", "42703", "42883"].includes(error.code || "") ||
     /execute_stock_purchase|stock_trades|stock_quotes/i.test(message)
   ) {
-    return { status: 503, error: "Stock trading is not configured yet. Ask your administrator to apply supabase/add_stock_trading.sql." };
+    return { status: 503, error: "Stock trading is not configured yet. Ask your administrator to apply supabase/add_stock_trading.sql, or supabase/add_stock_sales.sql on an existing stock-trading database." };
   }
   return { status: 500, error: "Could not place this stock order. Please try again." };
 }
@@ -54,13 +55,15 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "An active account is required to buy shares." }, { status: 403 });
     }
 
-    // The API accepts only a ticker and share quantity. The database function
-    // reads the current server-side demo quote and atomically checks/debits the
-    // user's ledger, so a browser cannot choose its own price or spend twice.
+    // The API accepts only a ticker and share quantity from the browser. It
+    // recalculates the paper-market multiplier on the server; the database
+    // function bounds it against the stored anchor quote and atomically
+    // checks/debits the user's ledger, so a browser cannot choose its price.
     const { data: order, error } = await supabase.rpc("execute_stock_purchase", {
       p_user_id: user.id,
       p_symbol: parsed.data.symbol,
-      p_shares: parsed.data.shares
+      p_shares: parsed.data.shares,
+      p_price_multiplier: stockPriceMultiplier(parsed.data.symbol, Date.now())
     });
 
     if (error) {

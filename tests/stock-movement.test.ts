@@ -1,32 +1,41 @@
 import { describe, expect, it } from "vitest";
 import {
-  advanceStockMovementSeries,
   buildStockSparklineGeometry,
-  createStockMovementSeries,
+  createStockPriceSeries,
   formatStockMovementPercent,
-  nextStockMovementValue,
+  simulatedStockPrice,
+  stockMarketTick,
   stockMovementChange,
-  STOCK_MOVEMENT_POINT_COUNT
+  stockPriceMultiplier,
+  STOCK_MOVEMENT_POINT_COUNT,
+  STOCK_PRICE_MAX_MULTIPLIER,
+  STOCK_PRICE_MIN_MULTIPLIER
 } from "@/lib/stock-movement";
 
-describe("stock movement series", () => {
-  it("creates a bounded, deterministic series for a ticker", () => {
-    const first = createStockMovementSeries("AAPL");
-    const second = createStockMovementSeries("aapl");
+const timestamp = Date.UTC(2026, 0, 15, 14, 30, 0);
 
-    expect(first).toEqual(second);
-    expect(first).toHaveLength(STOCK_MOVEMENT_POINT_COUNT);
-    expect(first.every((point) => Number.isFinite(point) && point >= 94.5 && point <= 105.5)).toBe(true);
-    expect(createStockMovementSeries("MSFT")).not.toEqual(first);
+describe("simulated stock market prices", () => {
+  it("creates a bounded, deterministic multiplier for a ticker and time", () => {
+    const first = stockPriceMultiplier("AAPL", timestamp);
+    const second = stockPriceMultiplier("aapl", timestamp);
+
+    expect(first).toBe(second);
+    expect(first).toBeGreaterThanOrEqual(STOCK_PRICE_MIN_MULTIPLIER);
+    expect(first).toBeLessThanOrEqual(STOCK_PRICE_MAX_MULTIPLIER);
+    expect(stockPriceMultiplier("MSFT", timestamp)).not.toBe(first);
+    expect(stockMarketTick(timestamp + 2_499)).toBe(stockMarketTick(timestamp));
   });
 
-  it("advances a series without growing it beyond the display window", () => {
-    const series = createStockMovementSeries("NVDA", 6);
-    const advanced = advanceStockMovementSeries(series, "NVDA", 4, 6);
+  it("derives a current price and price history from the stored anchor quote", () => {
+    const price = simulatedStockPrice(231, "AAPL", timestamp);
+    const series = createStockPriceSeries(231, "AAPL", timestamp);
 
-    expect(advanced).toHaveLength(6);
-    expect(advanced.slice(0, -1)).toEqual(series.slice(1));
-    expect(advanced[advanced.length - 1]).toBe(nextStockMovementValue("NVDA", series[series.length - 1], 4));
+    expect(price).toBeGreaterThanOrEqual(231 * STOCK_PRICE_MIN_MULTIPLIER - 0.01);
+    expect(price).toBeLessThanOrEqual(231 * STOCK_PRICE_MAX_MULTIPLIER + 0.01);
+    expect(series).toHaveLength(STOCK_MOVEMENT_POINT_COUNT);
+    expect(series[series.length - 1]).toBe(price);
+    expect(series.every((point) => Number.isFinite(point) && point > 0)).toBe(true);
+    expect(simulatedStockPrice(0, "AAPL", timestamp)).toBe(0);
   });
 
   it("reports up, down, and flat movement from the visible window", () => {

@@ -4,6 +4,7 @@ import { ensureProfile } from "@/lib/auth";
 import { createSupabaseAdminClient } from "@/lib/supabase-server";
 import { normalizeStatus } from "@/lib/transaction-status";
 import { availableBalance } from "@/lib/balance";
+import type { StockTrade } from "@/lib/stocks";
 
 export default async function DashboardPage() {
   const profile = await ensureProfile();
@@ -29,7 +30,7 @@ export default async function DashboardPage() {
     supabase.from("stock_quotes").select("*").eq("is_active", true).order("symbol"),
     supabase
       .from("stock_trades")
-      .select("id,symbol,company_name,shares,price_per_share,total_amount,created_at")
+      .select("id,symbol,company_name,shares,price_per_share,total_amount,created_at,side")
       .eq("user_id", profile.id)
       .order("created_at", { ascending: false })
   ]);
@@ -37,8 +38,29 @@ export default async function DashboardPage() {
   // Older rows can still carry the legacy status values ('failed', 'approved').
   const ledger = (transactions || []).map((txn) => ({ ...txn, status: normalizeStatus(txn.status) }));
 
-  if (stockQuotesError || stockTradesError) {
-    console.error("Stock trading tables are unavailable. Apply supabase/add_stock_trading.sql.", stockQuotesError || stockTradesError);
+  let stockTradeRows: StockTrade[] | null = stockTrades as StockTrade[] | null;
+  let resolvedStockTradesError = stockTradesError;
+  const stockTradesErrorText = `${stockTradesError?.message || ""} ${stockTradesError?.details || ""}`;
+  if (
+    stockTradesError &&
+    ["42703", "PGRST204"].includes(stockTradesError.code || "") &&
+    /\bside\b/i.test(stockTradesErrorText)
+  ) {
+    // Keep the existing portfolio readable until add_stock_sales.sql is applied.
+    const fallback = await supabase
+      .from("stock_trades")
+      .select("id,symbol,company_name,shares,price_per_share,total_amount,created_at")
+      .eq("user_id", profile.id)
+      .order("created_at", { ascending: false });
+    stockTradeRows = fallback.data as StockTrade[] | null;
+    resolvedStockTradesError = fallback.error;
+  }
+
+  if (stockQuotesError || resolvedStockTradesError) {
+    console.error(
+      "Stock trading tables are unavailable. Apply supabase/add_stock_trading.sql and supabase/add_stock_sales.sql.",
+      stockQuotesError || resolvedStockTradesError
+    );
   }
 
   return (
@@ -47,8 +69,8 @@ export default async function DashboardPage() {
       transactions={ledger}
       paymentMethods={paymentMethods || []}
       stockQuotes={stockQuotes || []}
-      stockTrades={stockTrades || []}
-      stockTradingReady={!stockQuotesError && !stockTradesError}
+      stockTrades={stockTradeRows || []}
+      stockTradingReady={!stockQuotesError && !resolvedStockTradesError}
     />
   );
 }
