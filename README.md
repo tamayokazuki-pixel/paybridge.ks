@@ -79,6 +79,12 @@ deploy. Also add your Vercel domain's callback
 - **This is simulated paper trading, not a brokerage or crypto-exchange integration.** The seeded anchor prices and generated movements are illustrative demo values, not live market quotes. Orders are not sent to a broker/exchange and do not represent real share or cryptocurrency ownership. Crypto listings are fractional paper units using the same trade ledger as equities. Sales only convert a paper position into this app's cash balance; any external withdrawal remains subject to the app's manual withdrawal process. Do not use this feature for real-money investing.
 - New databases get the catalog, buy/sell trade ledger, row-level security, and trade functions from `supabase/schema.sql`. Existing projects without Stocks must run `supabase/add_stock_trading.sql`; projects that installed the original buy-only feature must also run `supabase/add_stock_sales.sql`. Projects with the original 10-stock catalog must run `supabase/add_crypto_energy_listings.sql` to add the crypto and energy/oil listings. Re-running those migrations does not reset existing quote values.
 
+## Backdating & admin transactions
+
+- Verified admins can click **+ Backdate / Add Transaction** in the Admin Console header (or **Backdate txn** on any user row in **Admin → Users**) to create a deposit, withdrawal, transfer, or admin adjustment with any custom date and time (`POST /api/admin/transactions/create`).
+- Every transaction row across **Overview**, **Requests**, and **Cheques** includes an **Edit date** action (`POST /api/admin/transactions/backdate`) to update `created_at` (and `completed_at` for finalized rows, plus linked `stock_trades.created_at` timestamps when applicable). Cheque approvals also accept an optional custom transaction date and time.
+- All admin-created and backdated entries validate calendar dates/times, enforce available-balance rules on debits, and record audit entries in `public.activity_logs`.
+
 Run automated checks with `npm test`, `npm run lint`, and `npm run build`. The build itself no longer needs the Supabase variables (the browser client is created lazily, never while pages are pre-rendered), but the running app needs all three — see "Deploying on Vercel" above.
 
 ## Troubleshooting
