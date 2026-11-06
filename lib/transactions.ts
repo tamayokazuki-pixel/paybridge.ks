@@ -1,3 +1,4 @@
+import { z } from "zod";
 import type { createSupabaseAdminClient } from "./supabase-server";
 import { LEGACY_STATUS_FALLBACK, type TransactionStatus } from "./transaction-status";
 
@@ -21,6 +22,90 @@ import { LEGACY_STATUS_FALLBACK, type TransactionStatus } from "./transaction-st
 
 type SupabaseAdmin = ReturnType<typeof createSupabaseAdminClient>;
 
+export const TRANSACTION_TYPES = ["deposit", "withdrawal", "transfer", "admin_adjustment"] as const;
+
+export type TransactionType = (typeof TRANSACTION_TYPES)[number];
+
+export const adminAmountSchema = z
+  .number({ invalid_type_error: "Enter a valid dollar amount." })
+  .finite("Enter a valid dollar amount.")
+  .min(0.01, "Amount must be at least $0.01.")
+  .max(999_999_999_999.99, "Amount exceeds the maximum ledger limit.")
+  .refine((value) => /^\d+(?:\.\d{1,2})?$/.test(String(value)), "Use dollars and cents (at most two decimal places).");
+
+const ISO_DATE_OR_DATETIME_RE =
+  /^(\d{4})-(\d{2})-(\d{2})(?:[T ](\d{2}):(\d{2})(?::(\d{2})(?:\.(\d{1,6}))?)?(Z|[+-]\d{2}:\d{2})?)?$/;
+
+/**
+ * Validates a calendar date or date-time string (past, present, or future) and
+ * returns a canonical ISO-8601 UTC timestamp. Rejects impossible calendar dates
+ * such as 2024-02-31 or 2025-02-29 that `new Date(...)` would otherwise roll over.
+ */
+export function parseTransactionTimestamp(
+  raw: unknown
+): { ok: true; iso: string } | { ok: false; error: string } {
+  if (typeof raw !== "string") {
+    return { ok: false, error: "Enter a valid transaction date and time." };
+  }
+  const trimmed = raw.trim();
+  const match = ISO_DATE_OR_DATETIME_RE.exec(trimmed);
+  if (!match) {
+    return { ok: false, error: "Enter a valid transaction date and time." };
+  }
+
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const hasTime = match[4] !== undefined;
+  const hour = hasTime ? Number(match[4]) : 0;
+  const minute = hasTime ? Number(match[5]) : 0;
+  const second = match[6] !== undefined ? Number(match[6]) : 0;
+  const fraction = match[7] ? match[7].slice(0, 3).padEnd(3, "0") : "000";
+  const tz = match[8];
+
+  if (year < 1970 || year > 2100) {
+    return { ok: false, error: "Transaction year must be between 1970 and 2100." };
+  }
+  if (month < 1 || month > 12) {
+    return { ok: false, error: "Enter a valid calendar month." };
+  }
+  const maxDay = new Date(Date.UTC(year, month, 0)).getUTCDate();
+  if (day < 1 || day > maxDay) {
+    return { ok: false, error: "Enter a valid calendar day for that month." };
+  }
+  if (hour > 23 || minute > 59 || second > 59) {
+    return { ok: false, error: "Enter a valid time of day." };
+  }
+  if (tz && tz !== "Z") {
+    const [offsetHours, offsetMinutes] = tz.slice(1).split(":").map(Number);
+    if (offsetHours > 23 || offsetMinutes > 59) {
+      return { ok: false, error: "Enter a valid timezone offset." };
+    }
+  }
+
+  const normalized = !hasTime
+    ? `${match[1]}-${match[2]}-${match[3]}T00:00:00.000Z`
+    : `${match[1]}-${match[2]}-${match[3]}T${match[4]}:${match[5]}:${String(second).padStart(2, "0")}.${fraction}${tz || ""}`;
+
+  const parsed = new Date(normalized);
+  if (Number.isNaN(parsed.getTime())) {
+    return { ok: false, error: "Enter a valid transaction date and time." };
+  }
+
+  return { ok: true, iso: parsed.toISOString() };
+}
+
+/**
+ * Formats an ISO timestamp or Date as `YYYY-MM-DDTHH:mm` in the local timezone
+ * for `<input type="datetime-local" />`.
+ */
+export function toLocalDateTimeInputValue(value: string | Date): string {
+  const date = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(date.getTime())) return "";
+  const pad = (part: number) => String(part).padStart(2, "0");
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
 export type DbError = { code?: string | null; message?: string | null; details?: string | null } | null;
 
 export type WriteResult<T> = {
@@ -30,7 +115,7 @@ export type WriteResult<T> = {
   legacyStatus: boolean;
 };
 
-const MAX_ATTEMPTS = 6;
+const MAX_ATTEMPTS = 8;
 
 function errorMessage(error: DbError) {
   return `${error?.message || ""} ${error?.details || ""}`;
@@ -57,10 +142,21 @@ export function isStatusConstraintError(error: DbError): boolean {
   return /status/i.test(message);
 }
 
+/** True when Postgres refused the write because of a CHECK constraint on type. */
+export function isTypeConstraintError(error: DbError): boolean {
+  if (!error) return false;
+  const message = errorMessage(error);
+  if (error.code !== "23514" && !/violates check constraint/i.test(message)) return false;
+  return /type/i.test(message) && !/cheque_details/i.test(message);
+}
+
 export function describeDbError(error: DbError): string {
   if (!error) return "";
   if (isStatusConstraintError(error)) {
     return "the database still only allows the old transaction status values (run supabase/fix_transactions_status.sql in the Supabase SQL editor)";
+  }
+  if (isTypeConstraintError(error)) {
+    return "the database still only allows the old transaction type values (run supabase/fix_transactions_status.sql in the Supabase SQL editor)";
   }
   return error.message || "unknown database error";
 }
@@ -73,7 +169,13 @@ export function describeDbError(error: DbError): string {
 export async function finalizeTransaction(
   supabase: SupabaseAdmin,
   transactionId: string,
-  fields: { status: TransactionStatus; admin_note?: string | null; reference?: string | null; completed_at?: string },
+  fields: {
+    status: TransactionStatus;
+    admin_note?: string | null;
+    reference?: string | null;
+    completed_at?: string;
+    created_at?: string;
+  },
   options: { requiredColumns?: readonly string[] } = {}
 ): Promise<WriteResult<Record<string, unknown>>> {
   const payload: Record<string, unknown> = { ...fields };
@@ -122,7 +224,8 @@ export async function finalizeTransaction(
 
 /**
  * Inserts a transaction, dropping any column the live table does not have
- * (a fresh install from schema.sql has no `profile_id`, an older database does).
+ * (a fresh install from schema.sql has no `profile_id`, an older database does)
+ * and falling back to legacy status vocabulary when needed.
  */
 export async function insertTransaction(
   supabase: SupabaseAdmin,
@@ -130,18 +233,75 @@ export async function insertTransaction(
   options: { requiredColumns?: readonly string[] } = {}
 ): Promise<WriteResult<Record<string, unknown>>> {
   const payload: Record<string, unknown> = { ...row };
+  let legacyStatus = false;
 
   for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt += 1) {
     const { data, error } = await supabase.from("transactions").insert(payload).select("*").single();
-    if (!error) return { data: data as Record<string, unknown>, error: null, legacyStatus: false };
+    if (!error) return { data: data as Record<string, unknown>, error: null, legacyStatus };
 
     const column = missingColumn(error);
     if (column && column in payload && !options.requiredColumns?.includes(column)) {
       delete payload[column];
       continue;
     }
+
+    if (isStatusConstraintError(error) && typeof payload.status === "string") {
+      const current = payload.status;
+      const fallback = LEGACY_STATUS_FALLBACK[current as TransactionStatus];
+      if (fallback && current !== fallback) {
+        payload.status = fallback;
+        legacyStatus = true;
+        continue;
+      }
+    }
+
+    return { data: null, error, legacyStatus };
+  }
+
+  return { data: null, error: { message: "Could not create the transaction after several attempts." }, legacyStatus };
+}
+
+/**
+ * Updates `created_at` (and optional `completed_at` / `admin_note`) on an
+ * existing transaction while tolerating missing optional columns on older DBs.
+ */
+export async function updateTransactionDate(
+  supabase: SupabaseAdmin,
+  transactionId: string,
+  fields: {
+    created_at: string;
+    completed_at?: string | null;
+    admin_note?: string | null;
+  },
+  options: { requiredColumns?: readonly string[] } = {}
+): Promise<WriteResult<Record<string, unknown>>> {
+  const required = new Set(["created_at", ...(options.requiredColumns || [])]);
+  const payload: Record<string, unknown> = { ...fields };
+
+  for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt += 1) {
+    const { data, error } = await supabase
+      .from("transactions")
+      .update(payload)
+      .eq("id", transactionId)
+      .select("*")
+      .single();
+
+    if (!error) {
+      return { data: data as Record<string, unknown>, error: null, legacyStatus: false };
+    }
+
+    const column = missingColumn(error);
+    if (column && column in payload && !required.has(column)) {
+      delete payload[column];
+      continue;
+    }
+
     return { data: null, error, legacyStatus: false };
   }
 
-  return { data: null, error: { message: "Could not create the transaction after several attempts." }, legacyStatus: false };
+  return {
+    data: null,
+    error: { message: "Could not update the transaction date after several attempts." },
+    legacyStatus: false
+  };
 }

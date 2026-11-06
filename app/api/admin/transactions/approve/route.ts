@@ -2,12 +2,18 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getAdminUser } from "@/lib/auth";
 import { createSupabaseAdminClient } from "@/lib/supabase-server";
-import { describeDbError, finalizeTransaction, missingColumn } from "@/lib/transactions";
+import {
+  describeDbError,
+  finalizeTransaction,
+  missingColumn,
+  parseTransactionTimestamp
+} from "@/lib/transactions";
 import { CHEQUE_METHOD_KEY, chequeDetailsSchema } from "@/lib/cheques";
 
 const schema = z.object({
   transactionId: z.string().uuid(),
-  reference: z.string().trim().max(100).optional()
+  reference: z.string().trim().max(100).optional(),
+  transactionDate: z.string().trim().min(1).optional()
 });
 
 export async function POST(request: Request) {
@@ -20,7 +26,16 @@ export async function POST(request: Request) {
   if (!parsed.success) {
     return NextResponse.json({ error: parsed.error.issues[0]?.message || "Invalid request body." }, { status: 400 });
   }
-  const { transactionId, reference } = parsed.data;
+  const { transactionId, reference, transactionDate } = parsed.data;
+
+  let customIsoDate: string | undefined;
+  if (transactionDate !== undefined) {
+    const parsedDate = parseTransactionTimestamp(transactionDate);
+    if (!parsedDate.ok) {
+      return NextResponse.json({ error: parsedDate.error }, { status: 400 });
+    }
+    customIsoDate = parsedDate.iso;
+  }
 
   try {
     const supabase = createSupabaseAdminClient();
@@ -49,11 +64,22 @@ export async function POST(request: Request) {
       }
     }
 
-    const { data, error, legacyStatus } = await finalizeTransaction(supabase, transactionId, {
-      status: "completed",
-      reference: reference || null,
-      completed_at: new Date().toISOString()
-    }, isCheque ? { requiredColumns: ["reference"] } : {});
+    const requiredColumns = [
+      ...(isCheque ? ["reference"] : []),
+      ...(customIsoDate ? ["created_at"] : [])
+    ];
+
+    const { data, error, legacyStatus } = await finalizeTransaction(
+      supabase,
+      transactionId,
+      {
+        status: "completed",
+        reference: reference || null,
+        completed_at: customIsoDate || new Date().toISOString(),
+        ...(customIsoDate ? { created_at: customIsoDate } : {})
+      },
+      requiredColumns.length ? { requiredColumns } : {}
+    );
 
     if (error) {
       console.error("Approve transaction failed:", error);
@@ -70,7 +96,9 @@ export async function POST(request: Request) {
       actor_id: adminUser.id,
       user_id: txn.user_id,
       action: "transaction_approved",
-      details: `Approved transaction ${transactionId}`
+      details: customIsoDate
+        ? `Approved transaction ${transactionId} (dated ${customIsoDate})`
+        : `Approved transaction ${transactionId}`
     });
     if (logError) console.error("Could not write activity log:", logError.message);
 

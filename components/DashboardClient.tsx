@@ -341,7 +341,14 @@ function TransactionList({ transactions }: { transactions: Transaction[] }) {
                       {txn.method_key === "stocks" ? `${txn.type === "deposit" ? "+" : "−"}${money(txn.amount)}` : money(txn.amount)}
                     </td>
                     <td><span className={`pill ${txn.status}`}>{txn.status}</span></td>
-                    <td>{new Date(txn.created_at).toLocaleDateString()}</td>
+                    <td suppressHydrationWarning>
+                      <div>
+                        <p className="whitespace-nowrap">{new Date(txn.created_at).toLocaleDateString()}</p>
+                        <p className="whitespace-nowrap text-xs text-grey">
+                          {new Date(txn.created_at).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}
+                        </p>
+                      </div>
+                    </td>
                     <td>
                       {isChequeTransaction(txn) ? (
                         <button className="text-sm font-bold text-teal2 underline" onClick={() => setSelectedCheque(txn)} type="button">View cheque</button>
