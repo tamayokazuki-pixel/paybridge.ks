@@ -15,6 +15,9 @@
   --red: #ff4d6d;
   --shadow: 0 8px 40px rgba(10, 22, 40, .12);
   --radius: 14px;
+  --font-poppins: 'Poppins', 'popins', sans-serif;
+  --font-dm-sans: var(--font-poppins);
+  --font-playfair: var(--font-poppins);
 }
 
 * {
@@ -29,7 +32,7 @@ body {
   margin: 0;
   background: var(--off);
   color: var(--navy);
-  font-family: var(--font-dm-sans), sans-serif;
+  font-family: var(--font-poppins), 'Poppins', 'popins', sans-serif;
 }
 
 a {
@@ -45,7 +48,7 @@ textarea {
 }
 
 .font-head {
-  font-family: var(--font-playfair), Georgia, serif;
+  font-family: var(--font-poppins), 'Poppins', 'popins', sans-serif;
 }
 
 .brand-mark {
