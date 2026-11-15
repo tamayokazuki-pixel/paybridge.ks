@@ -14,8 +14,9 @@ const config: Config = {
         grey: "#8a96a8"
       },
       fontFamily: {
-        head: ["var(--font-playfair)", "Georgia", "serif"],
-        body: ["var(--font-dm-sans)", "sans-serif"]
+        sans: ["var(--font-poppins)", "'Poppins'", "'popins'", "sans-serif"],
+        head: ["var(--font-poppins)", "'Poppins'", "'popins'", "sans-serif"],
+        body: ["var(--font-poppins)", "'Poppins'", "'popins'", "sans-serif"]
       },
       boxShadow: {
         soft: "0 8px 40px rgba(10,22,40,.12)"
