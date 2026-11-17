@@ -2,13 +2,14 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { getCurrentUser } from "@/lib/auth";
 import { isActiveAccount } from "@/lib/cheque-server";
+import { resolveStockSymbol } from "@/lib/stocks";
 import { stockPriceMultiplier } from "@/lib/stock-movement";
 import { createSupabaseAdminClient } from "@/lib/supabase-server";
 
 type RpcError = { code?: string | null; message?: string | null; details?: string | null };
 
 const sellSchema = z.object({
-  symbol: z.string().trim().toUpperCase().regex(/^[A-Z]{1,5}(?:\.[A-Z])?$/, "Choose a valid stock symbol."),
+  symbol: z.string().trim().toUpperCase().regex(/^[A-Z]{1,6}(?:\.[A-Z])?$/, "Choose a valid stock symbol."),
   shares: z.number()
     .finite("Enter a valid number of shares.")
     .min(0.0001, "Sell at least 0.0001 shares.")
@@ -58,11 +59,12 @@ export async function POST(request: Request) {
     // The browser supplies only a ticker and quantity. The server recalculates
     // the bounded paper-market multiplier, and the RPC atomically verifies
     // ownership, records the sale, and credits available cash.
+    const targetSymbol = resolveStockSymbol(parsed.data.symbol);
     const { data: order, error } = await supabase.rpc("execute_stock_sale", {
       p_user_id: user.id,
-      p_symbol: parsed.data.symbol,
+      p_symbol: targetSymbol,
       p_shares: parsed.data.shares,
-      p_price_multiplier: stockPriceMultiplier(parsed.data.symbol, Date.now())
+      p_price_multiplier: stockPriceMultiplier(targetSymbol, Date.now())
     });
 
     if (error) {

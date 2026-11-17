@@ -11,7 +11,7 @@ import { POST } from "@/app/api/stocks/buy/route";
 import { POST as sellPOST } from "@/app/api/stocks/sell/route";
 import { availableBalance } from "@/lib/balance";
 import { stockPriceMultiplier } from "@/lib/stock-movement";
-import { aggregateStockTrades, stockAssetCategory, type StockQuote, type StockTrade } from "@/lib/stocks";
+import { aggregateStockTrades, resolveStockSymbol, stockAssetCategory, type StockQuote, type StockTrade } from "@/lib/stocks";
 
 const fixedNow = Date.UTC(2026, 0, 15, 14, 30, 0);
 
@@ -116,6 +116,17 @@ describe("stock purchase API", () => {
       p_price_multiplier: stockPriceMultiplier("AAPL", fixedNow)
     });
     expect(await response.json()).toMatchObject({ order: { symbol: "AAPL", shares: 1.25, total_amount: 288.75 } });
+  });
+
+  it("resolves SpaceX ticker aliases to SPCX", async () => {
+    const response = await POST(request({ symbol: "SPACE", shares: 2 }));
+    expect(response.status).toBe(201);
+    expect(db.rpc).toHaveBeenCalledWith("execute_stock_purchase", {
+      p_user_id: userId,
+      p_symbol: "SPCX",
+      p_shares: 2,
+      p_price_multiplier: stockPriceMultiplier("SPCX", fixedNow)
+    });
   });
 
   it("blocks suspended accounts before they can place a purchase", async () => {
@@ -255,5 +266,16 @@ describe("stock ledger calculations", () => {
       { type: "withdrawal", status: "completed", amount: 200 },
       { type: "deposit", status: "completed", amount: 250 }
     ])).toBe(550);
+  });
+
+  it("classifies aerospace listings under the stocks category", () => {
+    expect(stockAssetCategory({ sector: "Aerospace & Space Exploration" })).toBe("stocks");
+  });
+
+  it("resolves symbol aliases correctly", () => {
+    expect(resolveStockSymbol("SPACE")).toBe("SPCX");
+    expect(resolveStockSymbol("spacex")).toBe("SPCX");
+    expect(resolveStockSymbol("SPCX")).toBe("SPCX");
+    expect(resolveStockSymbol("TSLA")).toBe("TSLA");
   });
 });

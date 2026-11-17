@@ -23,6 +23,7 @@ values
   ('META', 'Meta Platforms, Inc.', 'Communication Services', 612.00),
   ('AMD', 'Advanced Micro Devices, Inc.', 'Semiconductors', 132.00),
   ('JPM', 'JPMorgan Chase & Co.', 'Financials', 295.00),
+  ('SPCX', 'SpaceX', 'Aerospace & Space Exploration', 137.00),
   ('BTC', 'Bitcoin', 'Cryptocurrency', 97000.00),
   ('ETH', 'Ethereum', 'Cryptocurrency', 3400.00),
   ('SOL', 'Solana', 'Cryptocurrency', 210.00),
