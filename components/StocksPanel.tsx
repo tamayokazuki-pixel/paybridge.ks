@@ -2,9 +2,9 @@
 
 import { Fragment, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowRight, ArrowRightLeft, CircleAlert, Minus, TrendingDown, TrendingUp, X } from "lucide-react";
+import { ArrowRight, ArrowRightLeft, CircleAlert, Minus, Search, TrendingDown, TrendingUp, X } from "lucide-react";
 import { StockMovementChart } from "@/components/StockMovementChart";
-import { aggregateStockTrades, formatShares, stockAssetCategory, type StockAssetCategory, type StockHolding, type StockQuote, type StockTrade } from "@/lib/stocks";
+import { aggregateStockTrades, filterStockQuotes, formatShares, stockAssetCategory, type StockAssetCategory, type StockHolding, type StockQuote, type StockTrade } from "@/lib/stocks";
 import {
   createStockPriceSeries,
   formatStockMovementPercent,
@@ -52,6 +52,7 @@ export function StocksPanel({
   const activeQuotes = useMemo(() => quotes.filter((quote) => quote.is_active !== false), [quotes]);
   const [symbol, setSymbol] = useState(activeQuotes[0]?.symbol || "");
   const [assetCategory, setAssetCategory] = useState<MarketCategory>("all");
+  const [searchQuery, setSearchQuery] = useState("");
   const [sharesInput, setSharesInput] = useState("1");
   const [feedback, setFeedback] = useState<Feedback>(null);
   const [busy, setBusy] = useState(false);
@@ -85,25 +86,26 @@ export function StocksPanel({
   );
 
   const visibleMarketQuotes = useMemo(
-    () => marketQuotes.filter((quote) => assetCategory === "all" || stockAssetCategory(quote) === assetCategory),
-    [assetCategory, marketQuotes]
+    () => filterStockQuotes(marketQuotes, searchQuery, assetCategory),
+    [assetCategory, marketQuotes, searchQuery]
   );
   const marketCategoryCounts = useMemo<Record<MarketCategory, number>>(
     () => ({
-      all: marketQuotes.length,
-      stocks: marketQuotes.filter((quote) => stockAssetCategory(quote) === "stocks").length,
-      crypto: marketQuotes.filter((quote) => stockAssetCategory(quote) === "crypto").length,
-      energy: marketQuotes.filter((quote) => stockAssetCategory(quote) === "energy").length
+      all: filterStockQuotes(marketQuotes, searchQuery, "all").length,
+      stocks: filterStockQuotes(marketQuotes, searchQuery, "stocks").length,
+      crypto: filterStockQuotes(marketQuotes, searchQuery, "crypto").length,
+      energy: filterStockQuotes(marketQuotes, searchQuery, "energy").length
     }),
-    [marketQuotes]
+    [marketQuotes, searchQuery]
   );
 
   function chooseAssetCategory(category: MarketCategory) {
     setAssetCategory(category);
     setFeedback(null);
     if (category === "all") return;
-    const firstInCategory = marketQuotes.find((quote) => stockAssetCategory(quote) === category);
-    if (firstInCategory && stockAssetCategory(firstInCategory) === category && !marketQuotes.some((quote) => quote.symbol === symbol && stockAssetCategory(quote) === category)) {
+    const categoryQuotes = filterStockQuotes(marketQuotes, searchQuery, category);
+    const firstInCategory = categoryQuotes[0];
+    if (firstInCategory && !categoryQuotes.some((quote) => quote.symbol === symbol)) {
       setSymbol(firstInCategory.symbol);
     }
   }
@@ -263,6 +265,33 @@ export function StocksPanel({
                 {visibleMarketQuotes.length} of {activeQuotes.length} demo listings
               </span>
             </div>
+            <div className="relative mt-4">
+              <Search className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-grey" size={17} />
+              <input
+                aria-label="Search stock listings"
+                className="input pl-10 pr-9 text-sm"
+                onChange={(e) => {
+                  setSearchQuery(e.target.value);
+                  setFeedback(null);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Escape") setSearchQuery("");
+                }}
+                placeholder="Search by symbol, company name, or sector..."
+                type="text"
+                value={searchQuery}
+              />
+              {searchQuery ? (
+                <button
+                  aria-label="Clear search"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 rounded p-1 text-grey transition hover:bg-slate-100 hover:text-navy"
+                  onClick={() => setSearchQuery("")}
+                  type="button"
+                >
+                  <X size={15} />
+                </button>
+              ) : null}
+            </div>
             <div aria-label="Filter market listings" className="mt-4 flex flex-wrap gap-2" role="group">
               {MARKET_CATEGORIES.map((category) => {
                 const selectedCategory = assetCategory === category.id;
@@ -325,7 +354,22 @@ export function StocksPanel({
               })}
             </div>
           ) : (
-            <p className="p-8 text-center text-sm text-grey">There are no active demo listings in this category.</p>
+            <div className="p-8 text-center">
+              <p className="text-sm font-semibold text-navy">
+                {searchQuery.trim()
+                  ? `No assets found matching "${searchQuery.trim()}".`
+                  : "There are no active demo listings in this category."}
+              </p>
+              {searchQuery.trim() ? (
+                <button
+                  className="mt-3 inline-flex items-center gap-1.5 text-xs font-bold text-teal2 underline hover:text-teal"
+                  onClick={() => setSearchQuery("")}
+                  type="button"
+                >
+                  Clear search
+                </button>
+              ) : null}
+            </div>
           )}
         </div>
 

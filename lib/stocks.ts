@@ -22,6 +22,47 @@ export function stockAssetCategory(quote: Pick<StockQuote, "sector">): StockAsse
   return "stocks";
 }
 
+export function matchesStockSearch(
+  quote: Pick<StockQuote, "symbol" | "company_name" | "sector">,
+  query: string
+): boolean {
+  const normalized = query.trim().toLowerCase();
+  if (!normalized) return true;
+
+  const symbolLower = quote.symbol.toLowerCase();
+  const companyLower = quote.company_name.toLowerCase();
+  const sectorLower = quote.sector.toLowerCase();
+
+  if (
+    symbolLower.includes(normalized) ||
+    companyLower.includes(normalized) ||
+    sectorLower.includes(normalized)
+  ) {
+    return true;
+  }
+
+  // Common aliases
+  if (quote.symbol === "SPCX" && ("spacex".includes(normalized) || "space x".includes(normalized) || "space".includes(normalized) || "elon".includes(normalized) || "musk".includes(normalized))) {
+    return true;
+  }
+  if (quote.symbol === "TSLA" && ("elon".includes(normalized) || "musk".includes(normalized))) {
+    return true;
+  }
+
+  return false;
+}
+
+export function filterStockQuotes<T extends Pick<StockQuote, "symbol" | "company_name" | "sector">>(
+  quotes: readonly T[],
+  query: string,
+  category: "all" | StockAssetCategory = "all"
+): T[] {
+  return quotes.filter((quote) => {
+    if (category !== "all" && stockAssetCategory(quote) !== category) return false;
+    return matchesStockSearch(quote, query);
+  });
+}
+
 export type StockTradeSide = "buy" | "sell";
 
 export type StockTrade = {
