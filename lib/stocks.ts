@@ -12,6 +12,8 @@ export type StockAssetCategory = "stocks" | "crypto" | "energy";
 export function resolveStockSymbol(symbol: string): string {
   const normalized = symbol.trim().toUpperCase();
   if (normalized === "SPACE" || normalized === "SPACEX") return "SPCX";
+  if (normalized === "BOEING") return "BA";
+  if (normalized === "AIRBUS") return "EADSY";
   return normalized;
 }
 
@@ -52,6 +54,21 @@ export function matchesStockSearch(
     return true;
   }
   if (quote.symbol === "LVMUY" && ("lvmh".includes(normalized) || "louis vuitton".includes(normalized))) {
+    return true;
+  }
+  if (quote.symbol === "ICAGY" && normalized === "iag") {
+    return true;
+  }
+  if (
+    (quote.symbol === "BA" || quote.symbol === "EADSY") &&
+    (normalized === "aircraft" || normalized === "plane" || normalized === "planes" || normalized === "airplane" || normalized === "airplanes")
+  ) {
+    return true;
+  }
+  if (
+    (sectorLower.includes("aviation") || sectorLower.includes("airlines")) &&
+    (normalized === "flight" || normalized === "flights" || normalized === "plane" || normalized === "planes" || normalized === "airplane" || normalized === "airplanes")
+  ) {
     return true;
   }
 
