@@ -48,6 +48,12 @@ export function matchesStockSearch(
   if (quote.symbol === "TSLA" && ("elon".includes(normalized) || "musk".includes(normalized))) {
     return true;
   }
+  if (quote.symbol === "TSM" && ("tsmc".includes(normalized) || "taiwan".includes(normalized))) {
+    return true;
+  }
+  if (quote.symbol === "LVMUY" && ("lvmh".includes(normalized) || "louis vuitton".includes(normalized))) {
+    return true;
+  }
 
   return false;
 }
