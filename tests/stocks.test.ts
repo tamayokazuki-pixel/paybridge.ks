@@ -11,7 +11,7 @@ import { POST } from "@/app/api/stocks/buy/route";
 import { POST as sellPOST } from "@/app/api/stocks/sell/route";
 import { availableBalance } from "@/lib/balance";
 import { stockPriceMultiplier } from "@/lib/stock-movement";
-import { aggregateStockTrades, resolveStockSymbol, stockAssetCategory, type StockQuote, type StockTrade } from "@/lib/stocks";
+import { aggregateStockTrades, filterStockQuotes, matchesStockSearch, resolveStockSymbol, stockAssetCategory, type StockQuote, type StockTrade } from "@/lib/stocks";
 
 const fixedNow = Date.UTC(2026, 0, 15, 14, 30, 0);
 
@@ -277,5 +277,60 @@ describe("stock ledger calculations", () => {
     expect(resolveStockSymbol("spacex")).toBe("SPCX");
     expect(resolveStockSymbol("SPCX")).toBe("SPCX");
     expect(resolveStockSymbol("TSLA")).toBe("TSLA");
+  });
+});
+
+describe("stock search and filtering", () => {
+  const sampleQuotes: StockQuote[] = [
+    { symbol: "AAPL", company_name: "Apple Inc.", sector: "Technology", price_per_share: 231 },
+    { symbol: "TSLA", company_name: "Tesla, Inc.", sector: "Consumer Discretionary", price_per_share: 320 },
+    { symbol: "SPCX", company_name: "SpaceX", sector: "Aerospace & Space Exploration", price_per_share: 137 },
+    { symbol: "BTC", company_name: "Bitcoin", sector: "Cryptocurrency", price_per_share: 97000 },
+    { symbol: "XOM", company_name: "Exxon Mobil Corporation", sector: "Energy · Integrated Oil & Gas", price_per_share: 120 }
+  ];
+
+  it("returns all quotes when search query is empty", () => {
+    expect(filterStockQuotes(sampleQuotes, "")).toHaveLength(5);
+    expect(filterStockQuotes(sampleQuotes, "   ")).toHaveLength(5);
+  });
+
+  it("filters quotes by ticker symbol case-insensitively", () => {
+    const results = filterStockQuotes(sampleQuotes, "aapl");
+    expect(results).toHaveLength(1);
+    expect(results[0].symbol).toBe("AAPL");
+  });
+
+  it("filters quotes by company name", () => {
+    const results = filterStockQuotes(sampleQuotes, "Tesla");
+    expect(results).toHaveLength(1);
+    expect(results[0].symbol).toBe("TSLA");
+  });
+
+  it("filters quotes by sector", () => {
+    const results = filterStockQuotes(sampleQuotes, "Crypto");
+    expect(results).toHaveLength(1);
+    expect(results[0].symbol).toBe("BTC");
+  });
+
+  it("finds SpaceX by alias queries like space or spacex", () => {
+    const bySpace = filterStockQuotes(sampleQuotes, "space");
+    expect(bySpace.some((q) => q.symbol === "SPCX")).toBe(true);
+
+    const bySpacex = filterStockQuotes(sampleQuotes, "spacex");
+    expect(bySpacex.some((q) => q.symbol === "SPCX")).toBe(true);
+  });
+
+  it("combines search query with category filter", () => {
+    const cryptoResults = filterStockQuotes(sampleQuotes, "BTC", "crypto");
+    expect(cryptoResults).toHaveLength(1);
+    expect(cryptoResults[0].symbol).toBe("BTC");
+
+    const stockResults = filterStockQuotes(sampleQuotes, "BTC", "stocks");
+    expect(stockResults).toHaveLength(0);
+  });
+
+  it("matches individual quotes correctly with matchesStockSearch", () => {
+    expect(matchesStockSearch(sampleQuotes[0], "Apple")).toBe(true);
+    expect(matchesStockSearch(sampleQuotes[0], "Nonexistent")).toBe(false);
   });
 });
