@@ -9,6 +9,12 @@ export type StockQuote = {
 
 export type StockAssetCategory = "stocks" | "crypto" | "energy";
 
+export function resolveStockSymbol(symbol: string): string {
+  const normalized = symbol.trim().toUpperCase();
+  if (normalized === "SPACE" || normalized === "SPACEX") return "SPCX";
+  return normalized;
+}
+
 export function stockAssetCategory(quote: Pick<StockQuote, "sector">): StockAssetCategory {
   const sector = quote.sector.toLowerCase();
   if (sector.includes("crypto")) return "crypto";
