@@ -268,14 +268,19 @@ describe("stock ledger calculations", () => {
     ])).toBe(550);
   });
 
-  it("classifies aerospace listings under the stocks category", () => {
+  it("classifies aerospace and aviation listings under the stocks category", () => {
     expect(stockAssetCategory({ sector: "Aerospace & Space Exploration" })).toBe("stocks");
+    expect(stockAssetCategory({ sector: "Aviation & Airlines" })).toBe("stocks");
+    expect(stockAssetCategory({ sector: "Aerospace & Commercial Aviation" })).toBe("stocks");
   });
 
   it("resolves symbol aliases correctly", () => {
     expect(resolveStockSymbol("SPACE")).toBe("SPCX");
     expect(resolveStockSymbol("spacex")).toBe("SPCX");
     expect(resolveStockSymbol("SPCX")).toBe("SPCX");
+    expect(resolveStockSymbol("BOEING")).toBe("BA");
+    expect(resolveStockSymbol("boeing")).toBe("BA");
+    expect(resolveStockSymbol("AIRBUS")).toBe("EADSY");
     expect(resolveStockSymbol("TSLA")).toBe("TSLA");
   });
 });
@@ -287,13 +292,16 @@ describe("stock search and filtering", () => {
     { symbol: "SPCX", company_name: "SpaceX", sector: "Aerospace & Space Exploration", price_per_share: 137 },
     { symbol: "TSM", company_name: "Taiwan Semiconductor Manufacturing Co. (TSMC)", sector: "Semiconductors", price_per_share: 395 },
     { symbol: "LVMUY", company_name: "LVMH Moët Hennessy Louis Vuitton", sector: "Consumer & Luxury Goods", price_per_share: 155 },
+    { symbol: "DAL", company_name: "Delta Air Lines, Inc.", sector: "Aviation & Airlines", price_per_share: 65 },
+    { symbol: "BA", company_name: "The Boeing Company", sector: "Aerospace & Commercial Aviation", price_per_share: 175 },
+    { symbol: "ICAGY", company_name: "International Consolidated Airlines Group (British Airways / Iberia)", sector: "Aviation & Airlines", price_per_share: 5.8 },
     { symbol: "BTC", company_name: "Bitcoin", sector: "Cryptocurrency", price_per_share: 97000 },
     { symbol: "XOM", company_name: "Exxon Mobil Corporation", sector: "Energy · Integrated Oil & Gas", price_per_share: 120 }
   ];
 
   it("returns all quotes when search query is empty", () => {
-    expect(filterStockQuotes(sampleQuotes, "")).toHaveLength(7);
-    expect(filterStockQuotes(sampleQuotes, "   ")).toHaveLength(7);
+    expect(filterStockQuotes(sampleQuotes, "")).toHaveLength(10);
+    expect(filterStockQuotes(sampleQuotes, "   ")).toHaveLength(10);
   });
 
   it("filters quotes by ticker symbol case-insensitively", () => {
@@ -334,6 +342,32 @@ describe("stock search and filtering", () => {
 
     const byLouisVuitton = filterStockQuotes(sampleQuotes, "louis vuitton");
     expect(byLouisVuitton.some((q) => q.symbol === "LVMUY")).toBe(true);
+  });
+
+  it("finds airline and aviation stocks by ticker, sector, and keywords", () => {
+    const byAirlines = filterStockQuotes(sampleQuotes, "airline");
+    expect(byAirlines.some((q) => q.symbol === "DAL")).toBe(true);
+    expect(byAirlines.some((q) => q.symbol === "ICAGY")).toBe(true);
+
+    const byAviation = filterStockQuotes(sampleQuotes, "aviation");
+    expect(byAviation.some((q) => q.symbol === "DAL")).toBe(true);
+    expect(byAviation.some((q) => q.symbol === "BA")).toBe(true);
+
+    const byBoeing = filterStockQuotes(sampleQuotes, "boeing");
+    expect(byBoeing.some((q) => q.symbol === "BA")).toBe(true);
+
+    const byFlight = filterStockQuotes(sampleQuotes, "flight");
+    expect(byFlight.some((q) => q.symbol === "DAL")).toBe(true);
+
+    const byPlane = filterStockQuotes(sampleQuotes, "plane");
+    expect(byPlane.some((q) => q.symbol === "BA")).toBe(true);
+    expect(byPlane.some((q) => q.symbol === "DAL")).toBe(true);
+
+    const byBritishAirways = filterStockQuotes(sampleQuotes, "british airways");
+    expect(byBritishAirways.some((q) => q.symbol === "ICAGY")).toBe(true);
+
+    const byIag = filterStockQuotes(sampleQuotes, "iag");
+    expect(byIag.some((q) => q.symbol === "ICAGY")).toBe(true);
   });
 
   it("combines search query with category filter", () => {
