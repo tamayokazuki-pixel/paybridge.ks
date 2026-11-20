@@ -285,13 +285,15 @@ describe("stock search and filtering", () => {
     { symbol: "AAPL", company_name: "Apple Inc.", sector: "Technology", price_per_share: 231 },
     { symbol: "TSLA", company_name: "Tesla, Inc.", sector: "Consumer Discretionary", price_per_share: 320 },
     { symbol: "SPCX", company_name: "SpaceX", sector: "Aerospace & Space Exploration", price_per_share: 137 },
+    { symbol: "TSM", company_name: "Taiwan Semiconductor Manufacturing Co. (TSMC)", sector: "Semiconductors", price_per_share: 395 },
+    { symbol: "LVMUY", company_name: "LVMH Moët Hennessy Louis Vuitton", sector: "Consumer & Luxury Goods", price_per_share: 155 },
     { symbol: "BTC", company_name: "Bitcoin", sector: "Cryptocurrency", price_per_share: 97000 },
     { symbol: "XOM", company_name: "Exxon Mobil Corporation", sector: "Energy · Integrated Oil & Gas", price_per_share: 120 }
   ];
 
   it("returns all quotes when search query is empty", () => {
-    expect(filterStockQuotes(sampleQuotes, "")).toHaveLength(5);
-    expect(filterStockQuotes(sampleQuotes, "   ")).toHaveLength(5);
+    expect(filterStockQuotes(sampleQuotes, "")).toHaveLength(7);
+    expect(filterStockQuotes(sampleQuotes, "   ")).toHaveLength(7);
   });
 
   it("filters quotes by ticker symbol case-insensitively", () => {
@@ -318,6 +320,20 @@ describe("stock search and filtering", () => {
 
     const bySpacex = filterStockQuotes(sampleQuotes, "spacex");
     expect(bySpacex.some((q) => q.symbol === "SPCX")).toBe(true);
+  });
+
+  it("finds worldwide stocks by ticker, company name, and alias", () => {
+    const byTsmc = filterStockQuotes(sampleQuotes, "tsmc");
+    expect(byTsmc.some((q) => q.symbol === "TSM")).toBe(true);
+
+    const byTaiwan = filterStockQuotes(sampleQuotes, "taiwan");
+    expect(byTaiwan.some((q) => q.symbol === "TSM")).toBe(true);
+
+    const byLvmh = filterStockQuotes(sampleQuotes, "lvmh");
+    expect(byLvmh.some((q) => q.symbol === "LVMUY")).toBe(true);
+
+    const byLouisVuitton = filterStockQuotes(sampleQuotes, "louis vuitton");
+    expect(byLouisVuitton.some((q) => q.symbol === "LVMUY")).toBe(true);
   });
 
   it("combines search query with category filter", () => {
